@@ -142,6 +142,7 @@ export default function CategoriesScreen() {
                   name={stat.iconName}
                   size={22}
                   color={stat.color}
+                  customImageUri={stat.customImageUri}
                 />
               </View>
               <View style={{ flex: 1 }}>

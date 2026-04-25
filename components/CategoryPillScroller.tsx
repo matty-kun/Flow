@@ -44,6 +44,7 @@ export default function CategoryPillScroller({ categories, selectedId, onSelect,
           name={cat.iconName}
           size={14}
           color={isSelected ? "#fff" : cat.color}
+          customImageUri={cat.customImageUri}
         />
         <Text
           style={{

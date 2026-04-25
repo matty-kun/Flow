@@ -2,11 +2,13 @@ import { CategoryIcon } from "@/components/CategoryIcon";
 import { Category, useTracking } from "@/context/TrackingContext";
 import { impact, notification } from "@/utils/haptics";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { Check, X } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Check, Image as ImageIcon, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import {
   Animated,
+  Image,
   Modal,
   Pressable,
   ScrollView,
@@ -39,6 +41,7 @@ export default function EditCategorySheet({ category, onClose }: Props) {
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("briefcase");
   const [color, setColor] = useState("#FBBF24");
+  const [customImageUri, setCustomImageUri] = useState<string | undefined>();
 
   const slideAnim = useRef(new Animated.Value(400)).current;
   const backdropAnim = useRef(new Animated.Value(0)).current;
@@ -50,6 +53,7 @@ export default function EditCategorySheet({ category, onClose }: Props) {
       setName(category.label);
       setIcon(category.iconName);
       setColor(category.color);
+      setCustomImageUri(category.customImageUri);
       Animated.parallel([
         Animated.timing(backdropAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
         Animated.spring(slideAnim, { toValue: 0, tension: 40, friction: 9, useNativeDriver: true }),
@@ -62,10 +66,23 @@ export default function EditCategorySheet({ category, onClose }: Props) {
     }
   }, [visible]);
 
+  const pickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setCustomImageUri(result.assets[0].uri);
+      impact(ImpactFeedbackStyle.Light);
+    }
+  };
+
   const handleSave = () => {
     const trimmed = name.trim();
     if (!trimmed || !category) return;
-    editCategory(category.id, trimmed, icon, color);
+    editCategory(category.id, trimmed, icon, color, customImageUri);
     notification(NotificationFeedbackType.Success);
     onClose();
   };
@@ -99,13 +116,23 @@ export default function EditCategorySheet({ category, onClose }: Props) {
               <Text style={{ fontSize: 10, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 10 }}>Icon</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 24 }}>
                 <View style={{ flexDirection: "row", gap: 10 }}>
+                  <Pressable
+                    onPress={pickImage}
+                    style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", overflow: "hidden", borderWidth: customImageUri ? 2 : 1, borderColor: customImageUri ? color : isDark ? "#3a3a3c" : "#f3f4f6", backgroundColor: isDark ? "#2c2c2e" : "#f9fafb" }}
+                  >
+                    {customImageUri ? (
+                      <Image source={{ uri: customImageUri }} style={{ width: 48, height: 48 }} />
+                    ) : (
+                      <ImageIcon size={20} color={isDark ? "#52525b" : "#9ca3af"} />
+                    )}
+                  </Pressable>
                   {CAT_ICONS.map((i) => (
                     <Pressable
                       key={i}
-                      onPress={() => { setIcon(i); impact(ImpactFeedbackStyle.Light); }}
-                      style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: icon === i ? color : isDark ? "#2c2c2e" : "#f9fafb", borderWidth: 1, borderColor: icon === i ? color : isDark ? "#3a3a3c" : "#f3f4f6" }}
+                      onPress={() => { setIcon(i); setCustomImageUri(undefined); impact(ImpactFeedbackStyle.Light); }}
+                      style={{ width: 48, height: 48, borderRadius: 16, alignItems: "center", justifyContent: "center", backgroundColor: !customImageUri && icon === i ? color : isDark ? "#2c2c2e" : "#f9fafb", borderWidth: 1, borderColor: !customImageUri && icon === i ? color : isDark ? "#3a3a3c" : "#f3f4f6" }}
                     >
-                      <CategoryIcon name={i} size={20} color={icon === i ? "#fff" : isDark ? "#52525b" : "#9ca3af"} />
+                      <CategoryIcon name={i} size={20} color={!customImageUri && icon === i ? "#fff" : isDark ? "#52525b" : "#9ca3af"} />
                     </Pressable>
                   ))}
                 </View>

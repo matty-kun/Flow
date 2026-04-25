@@ -455,7 +455,7 @@ const now = Date.now();
                           style={{ backgroundColor: `${catData?.color || "#10b981"}20` }}
                           className="w-11 h-11 rounded-[14px] items-center justify-center mr-3"
                         >
-                          <CategoryIcon name={catData?.iconName || "target"} size={22} color={catData?.color || "#10b981"} />
+                          <CategoryIcon name={catData?.iconName || "target"} size={22} color={catData?.color || "#10b981"} customImageUri={catData?.customImageUri} />
                         </View>
                         <View className="flex-1">
                           <Text className="font-black text-[#121212] dark:text-white text-base leading-tight" numberOfLines={1}>

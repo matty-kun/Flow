@@ -1,4 +1,5 @@
 import React from 'react';
+import { Image } from 'react-native';
 import {
   Tag, Briefcase, Heart, BookOpen, Coffee as CoffeeIcon, Zap, Target,
   Brain, Users, Code, Music, Camera, Layers, Dumbbell, Flame, Globe,
@@ -57,7 +58,10 @@ const icons: Record<string, any> = {
   'workflow': Workflow,
 };
 
-export const CategoryIcon = ({ name, size, color }: { name: string, size: number, color: string }) => {
+export const CategoryIcon = ({ name, size, color, customImageUri }: { name: string, size: number, color: string, customImageUri?: string }) => {
+  if (customImageUri) {
+    return <Image source={{ uri: customImageUri }} style={{ width: size, height: size, borderRadius: size / 2 }} />;
+  }
   const IconComponent = icons[name] || Tag;
   return <IconComponent size={size} color={color} />;
 };

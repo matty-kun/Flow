@@ -16,6 +16,7 @@ export type Category = {
   label: string;
   color: string;
   iconName: string;
+  customImageUri?: string;
 };
 
 export interface CustomGoal {
@@ -69,9 +70,9 @@ type TrackingContextType = {
   ) => Promise<void>;
   duplicateActivity: (id: number) => Promise<void>;
   refreshActivities: () => Promise<void>;
-  addCategory: (label: string, iconName: string, color: string) => void;
+  addCategory: (label: string, iconName: string, color: string, customImageUri?: string) => void;
   deleteCategory: (id: string) => void;
-  editCategory: (id: string, label: string, iconName: string, color: string) => void;
+  editCategory: (id: string, label: string, iconName: string, color: string, customImageUri?: string) => void;
   getTotalFocusTimeToday: () => number;
   customGoals: CustomGoal[];
   isGoalsLoaded: boolean;
@@ -176,12 +177,13 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const editCustomGoal = (goal: CustomGoal) =>
     setCustomGoals((prev) => prev.map((g) => (g.id === goal.id ? goal : g)));
 
-  const addCategory = (label: string, iconName: string, color: string) => {
+  const addCategory = (label: string, iconName: string, color: string, customImageUri?: string) => {
     const newCat: Category = {
       id: label.toLowerCase().replace(/\s+/g, "-"),
       label,
       iconName,
       color,
+      customImageUri,
     };
     setCategories((prev) => [...prev, newCat]);
   };
@@ -189,8 +191,8 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
   const deleteCategory = (id: string) =>
     setCategories((prev) => prev.filter((c) => c.id !== id));
 
-  const editCategory = (id: string, label: string, iconName: string, color: string) =>
-    setCategories((prev) => prev.map((c) => c.id === id ? { ...c, label, iconName, color } : c));
+  const editCategory = (id: string, label: string, iconName: string, color: string, customImageUri?: string) =>
+    setCategories((prev) => prev.map((c) => c.id === id ? { ...c, label, iconName, color, customImageUri } : c));
 
   const refreshActivities = async () => {
     if (!db || isRefreshing.current) return;

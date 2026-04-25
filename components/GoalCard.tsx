@@ -65,7 +65,7 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
             style={{ backgroundColor: `${catData.color}15` }}
             className="w-12 h-12 rounded-[16px] items-center justify-center mr-4"
           >
-            <CategoryIcon name={catData.iconName} size={22} color={catData.color} />
+            <CategoryIcon name={catData.iconName} size={22} color={catData.color} customImageUri={catData.customImageUri} />
           </View>
           <View className="flex-1">
             <Text

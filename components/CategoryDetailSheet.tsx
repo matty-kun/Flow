@@ -175,6 +175,7 @@ export default function CategoryDetailSheet({
                   name={catData?.iconName || "tag"}
                   size={36}
                   color={catData?.color || "#FBBF24"}
+                  customImageUri={catData?.customImageUri}
                 />
               </View>
               <Text
