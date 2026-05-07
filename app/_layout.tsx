@@ -48,6 +48,7 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
 
 import FloatingTimer from "@/components/FloatingTimer";
 import { LanguageProvider } from "@/context/LanguageContext";
+import { SummaryVisibleProvider } from "@/context/SummaryVisibleContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { loadHapticsPreference } from "@/utils/haptics";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
@@ -127,7 +128,9 @@ export default function RootLayout() {
       <LanguageProvider>
         <TrackingProvider>
           <OnboardingProvider>
-            <RootLayoutNav />
+            <SummaryVisibleProvider>
+              <RootLayoutNav />
+            </SummaryVisibleProvider>
           </OnboardingProvider>
         </TrackingProvider>
       </LanguageProvider>

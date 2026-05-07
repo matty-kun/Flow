@@ -78,7 +78,7 @@ export default function ActionWidget({
           }}
         >
           <View className="bg-white dark:bg-zinc-900 rounded-[28px] p-2.5 border border-black/5 dark:border-white/5 shadow-2xl min-w-[240px]">
-            <Pressable onPress={handleStartLive}>
+            <Pressable onPress={handleStartLive} style={{ borderRadius: 16, overflow: "hidden" }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-orange-50 dark:bg-orange-950/20" : ""}`}>
                   <View className="w-9 h-9 bg-orange-100 dark:bg-orange-500/20 rounded-xl items-center justify-center mr-4">
@@ -93,7 +93,7 @@ export default function ActionWidget({
 
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 mx-3 my-1" />
 
-            <Pressable onPress={handleTalkToKala}>
+            <Pressable onPress={handleTalkToKala} style={{ borderRadius: 16, overflow: "hidden" }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}>
                   <View className="w-9 h-9 bg-gray-50 dark:bg-zinc-800 rounded-xl items-center justify-center mr-4">
@@ -106,7 +106,7 @@ export default function ActionWidget({
               )}
             </Pressable>
 
-            <Pressable onPress={handleLogManually}>
+            <Pressable onPress={handleLogManually} style={{ borderRadius: 16, overflow: "hidden" }}>
               {({ pressed }) => (
                 <View className={`flex-row items-center justify-start py-4 px-5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}>
                   <View className="w-9 h-9 bg-gray-50 dark:bg-zinc-800 rounded-xl items-center justify-center mr-4">

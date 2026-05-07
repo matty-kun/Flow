@@ -67,6 +67,7 @@ export default function ActionSheet({ visible, onClose, title, actions = [] }: P
                     onClose();
                     action.onPress();
                   }}
+                  style={{ borderRadius: 16, overflow: "hidden" }}
                 >
                   {({ pressed }) => (
                     <View
@@ -95,7 +96,7 @@ export default function ActionSheet({ visible, onClose, title, actions = [] }: P
             ))}
 
             <View className="h-[1px] bg-gray-50 dark:bg-zinc-800 my-2" />
-            <Pressable onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }}>
+            <Pressable onPress={() => { impact(ImpactFeedbackStyle.Light); onClose(); }} style={{ borderRadius: 16, overflow: "hidden" }}>
               {({ pressed }) => (
                 <View className={`items-center justify-center py-3.5 rounded-2xl ${pressed ? "bg-gray-50 dark:bg-zinc-800" : ""}`}>
                   <Text className="text-base font-bold text-gray-400 dark:text-zinc-600">Cancel</Text>

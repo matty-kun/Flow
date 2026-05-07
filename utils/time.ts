@@ -15,21 +15,23 @@ export function formatDuration(durationMins: number): string {
   return `${hours}h ${mins}m`;
 }
 
-export function formatLogDuration(startTimeMs: number, endTimeMs: number | null, fallbackDurationMins: number | null): string {
-  const end = endTimeMs || (fallbackDurationMins ? startTimeMs + fallbackDurationMins * 60000 : Date.now());
+export function formatLogDuration(startTimeMs: number, endTimeMs: number | null, fallbackDurationSecs: number | null): string {
+  const end = endTimeMs || (fallbackDurationSecs ? startTimeMs + fallbackDurationSecs * 1000 : Date.now());
   const diffSecs = Math.max(0, Math.floor((end - startTimeMs) / 1000));
-  
+
   const hours = Math.floor(diffSecs / 3600);
   const mins = Math.floor((diffSecs % 3600) / 60);
   const secs = diffSecs % 60;
 
-  const mStr = mins.toString().padStart(2, '0');
-  const sStr = secs.toString().padStart(2, '0');
-
   if (hours > 0) {
-    return `${hours}:${mStr}:${sStr}`;
+    if (mins > 0 && secs > 0) return `${hours}h ${mins}m ${secs}s`;
+    if (mins > 0) return `${hours}h ${mins}m`;
+    return `${hours}h`;
   }
-  return `${mStr}:${sStr}`;
+  if (mins > 0) {
+    return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  }
+  return `${secs}s`;
 }
 
 export function formatLiveDuration(startTimeMs: number, currentTimeMs: number): string {

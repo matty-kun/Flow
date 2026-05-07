@@ -1,5 +1,6 @@
 import { CategoryIcon } from "@/components/CategoryIcon";
 import ActionSheet from "@/components/ActionSheet";
+import ActivityHeatmap from "@/components/ActivityHeatmap";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { DisplayActivity, pomodoroBaseTitle } from "@/utils/pomodoroMerge";
@@ -14,6 +15,7 @@ import {
     Edit2,
     MoreHorizontal,
     Search,
+    Share2,
     SlidersHorizontal,
     Trash2,
     X,
@@ -41,9 +43,15 @@ export default React.memo(function LogsScreen() {
 
   const [search, setSearch] = useState("");
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
+  const selectedActivityRef = React.useRef<Activity | null>(null);
   const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
   const [showFilter, setShowFilter] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [heatmapMonth, setHeatmapMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const filterAnim = useRef(new Animated.Value(0)).current;
 
@@ -81,7 +89,19 @@ export default React.memo(function LogsScreen() {
 
   const activeFilterCount = selectedCategories.length;
 
-  // Filter activities by search + category (memoized)
+  function prevMonth() {
+    setHeatmapMonth((m) => new Date(m.getFullYear(), m.getMonth() - 1, 1));
+    setSelectedDay(null);
+  }
+  function nextMonth() {
+    setHeatmapMonth((m) => new Date(m.getFullYear(), m.getMonth() + 1, 1));
+    setSelectedDay(null);
+  }
+  function handleSelectDay(day: string | null) {
+    setSelectedDay(day);
+  }
+
+  // Filter activities by search + category + selected heatmap day (memoized)
   const filtered = React.useMemo(() => {
     return activities.filter((a: Activity) => {
       const displayTitle = pomodoroBaseTitle(a.title) ?? a.title;
@@ -98,9 +118,16 @@ export default React.memo(function LogsScreen() {
       const matchesCat =
         selectedCategories.length === 0 ||
         selectedCategories.includes(a.category || "");
-      return matchesSearch && matchesCat;
+      const matchesDay = selectedDay
+        ? (() => {
+            const d = new Date(a.created_at);
+            const ymd = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+            return ymd === selectedDay;
+          })()
+        : true;
+      return matchesSearch && matchesCat && matchesDay;
     });
-  }, [search, activities, selectedCategories, categories]);
+  }, [search, activities, selectedCategories, categories, selectedDay]);
 
   // Group by date, then merge Pomodoro phases into one entry (memoized)
   const grouped = React.useMemo(() => {
@@ -247,6 +274,16 @@ export default React.memo(function LogsScreen() {
           )}
         </View>
 
+        {/* Heatmap */}
+        <ActivityHeatmap
+          activities={activities}
+          month={heatmapMonth}
+          selectedDay={selectedDay}
+          onSelectDay={handleSelectDay}
+          onPrevMonth={prevMonth}
+          onNextMonth={nextMonth}
+        />
+
         {/* Active filter chips */}
         {activeFilterCount > 0 && (
           <View className="flex-row flex-wrap gap-2 mb-6">
@@ -367,6 +404,7 @@ export default React.memo(function LogsScreen() {
                         if (isPomodoro) {
                           setSelectedPomodoroIds(log.pomodoroIds!);
                         } else {
+                          selectedActivityRef.current = log;
                           setSelectedActionLogId(log.id);
                         }
                       }}
@@ -572,6 +610,29 @@ export default React.memo(function LogsScreen() {
         title="Log Actions"
         actions={[
           {
+            label: "Share session",
+            icon: <Share2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              const log = selectedActivityRef.current;
+              if (log) {
+                const cat = categories.find((c: Category) => c.id === log.category);
+                router.push({
+                  pathname: "/share-session",
+                  params: {
+                    title: log.title,
+                    duration: formatLogDuration(log.start_time, log.end_time, log.duration),
+                    dateLabel: new Date(log.start_time).toLocaleString(undefined, {
+                      weekday: "short", month: "short", day: "numeric",
+                      hour: "numeric", minute: "2-digit",
+                    }),
+                    category: cat ? JSON.stringify(cat) : undefined,
+                  },
+                });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
             label: "Edit details",
             icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
             onPress: () => {
@@ -594,6 +655,7 @@ export default React.memo(function LogsScreen() {
           },
         ]}
       />
+
 
       <ActionSheet
         visible={selectedPomodoroIds !== null}

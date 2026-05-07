@@ -1,13 +1,14 @@
 import ActionSheet from "@/components/ActionSheet";
 import LogCard from "@/components/LogCard";
 import { useLanguage } from "@/context/LanguageContext";
-import { Activity, Category, CustomGoal } from "@/context/TrackingContext";
+import { Activity, Category, CustomGoal, useTracking } from "@/context/TrackingContext";
 import { DisplayActivity } from "@/utils/pomodoroMerge";
+import { formatLogDuration } from "@/utils/time";
 import { router } from "expo-router";
-import { Copy, Edit2, Trash2 } from "lucide-react-native";
+import { Copy, Edit2, Share2, Trash2 } from "lucide-react-native";
 import { View as MotiView } from "moti";
 import { useColorScheme } from "nativewind";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Text, View } from "react-native";
 
 interface Props {
@@ -21,8 +22,11 @@ interface Props {
 export default function RecentLogs({ recentLogs, categories, customGoals, deleteActivity, duplicateActivity }: Props) {
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
+  const selectedActivityRef = useRef<Activity | null>(null);
+  const { activities } = useTracking();
 
   return (
     <>
@@ -59,6 +63,8 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
                 if (isPomodoro) {
                   setSelectedPomodoroIds(log.pomodoroIds!);
                 } else {
+                  const full = activities.find((a: Activity) => a.id === log.id) ?? log as unknown as Activity;
+                  selectedActivityRef.current = full;
                   setSelectedActionLogId(log.id);
                 }
               }}
@@ -73,8 +79,31 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
         title="Log Actions"
         actions={[
           {
+            label: "Share session",
+            icon: <Share2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
+            onPress: () => {
+              const log = selectedActivityRef.current;
+              if (log) {
+                const cat = categories.find((c: Category) => c.id === log.category);
+                router.push({
+                  pathname: "/share-session",
+                  params: {
+                    title: log.title,
+                    duration: formatLogDuration(log.start_time, log.end_time, log.duration),
+                    dateLabel: new Date(log.start_time).toLocaleString(undefined, {
+                      weekday: "short", month: "short", day: "numeric",
+                      hour: "numeric", minute: "2-digit",
+                    }),
+                    category: cat ? JSON.stringify(cat) : undefined,
+                  },
+                });
+                setSelectedActionLogId(null);
+              }
+            },
+          },
+          {
             label: "Edit details",
-            icon: <Edit2 size={20} color={colorScheme === "dark" ? "#e5e7eb" : "#121212"} />,
+            icon: <Edit2 size={20} color={isDark ? "#e5e7eb" : "#121212"} />,
             onPress: () => {
               if (selectedActionLogId) {
                 router.push({ pathname: "/logmanual", params: { editId: selectedActionLogId } });
@@ -84,7 +113,7 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
           },
           {
             label: "Duplicate activity",
-            icon: <Copy size={20} color={colorScheme === "dark" ? "#9ca3af" : "#4b5563"} />,
+            icon: <Copy size={20} color={isDark ? "#9ca3af" : "#4b5563"} />,
             onPress: () => selectedActionLogId && duplicateActivity(selectedActionLogId),
           },
           {
@@ -114,6 +143,7 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
           },
         ]}
       />
+
     </>
   );
 }

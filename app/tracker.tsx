@@ -24,7 +24,8 @@ import { Audio } from "expo-av";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { Minimize2, Settings } from "lucide-react-native";
+import { formatLogDuration } from "@/utils/time";
+import { Minimize2, Settings, Share2 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { AppState, Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
@@ -74,6 +75,7 @@ export default function TrackerPage() {
   const [phaseDisplay, setPhaseDisplay] = useState<"work" | "break">("work");
   const [autoNextRound, setAutoNextRound] = useState(DEFAULT_POMODORO_SETTINGS.autoNextRound);
   const [showTimerSettings, setShowTimerSettings] = useState(false);
+  const completedAtMs = useRef<number>(0);
 
   const hasAlerted = useRef(false);
   const alarmSoundRef = useRef<Audio.Sound | null>(null);
@@ -486,6 +488,7 @@ export default function TrackerPage() {
     Vibration.vibrate([0, 500, 500], true);
     (async () => {
       playAlarm();
+      completedAtMs.current = Date.now();
       await stopTracker();
       clearTimerState();
       setIsCompleted(true);
@@ -617,6 +620,25 @@ export default function TrackerPage() {
               stopTracker().catch(() => {});
             }
             router.replace("/(tabs)");
+          }}
+          onShare={() => {
+            impact(ImpactFeedbackStyle.Light);
+            router.push({
+              pathname: "/share-session",
+              params: {
+                title: isPomodoroMode ? pBaseTitle : (activity?.title ?? ""),
+                duration: formatLogDuration(
+                  activity?.start_time ?? Date.now() - accumulatedSecs * 1000,
+                  completedAtMs.current || null,
+                  null,
+                ),
+                dateLabel: new Date(activity?.start_time ?? Date.now()).toLocaleString(undefined, {
+                  weekday: "short", month: "short", day: "numeric",
+                  hour: "numeric", minute: "2-digit",
+                }),
+                category: currentCategory ? JSON.stringify(currentCategory) : undefined,
+              },
+            });
           }}
         />
       </View>

@@ -1,4 +1,4 @@
-import { Check, Pause, Play, Square } from "lucide-react-native";
+import { Check, Pause, Play, Share2, Square } from "lucide-react-native";
 import { Pressable, StyleSheet, View } from "react-native";
 
 interface Props {
@@ -13,6 +13,7 @@ interface Props {
   onStop: () => void;
   onNextRound: () => void;
   onFinish: () => void;
+  onShare?: () => void;
 }
 
 export default function TimerControls({
@@ -27,6 +28,7 @@ export default function TimerControls({
   onStop,
   onNextRound,
   onFinish,
+  onShare,
 }: Props) {
   if (isPomodoroMode && midRoundWaiting) {
     return (
@@ -41,6 +43,14 @@ export default function TimerControls({
   if (isCompleted && !isPomodoroMode) {
     return (
       <View style={styles.controls}>
+        {onShare && (
+          <Pressable
+            onPress={onShare}
+            style={[styles.btn, { backgroundColor: isDark ? "#27272a" : "#f3f4f6", marginRight: 16 }]}
+          >
+            <Share2 size={22} color={isDark ? "#e5e7eb" : "#374151"} />
+          </Pressable>
+        )}
         <Pressable onPress={onFinish} style={[styles.btn, styles.checkBtn, { backgroundColor: "#FBBF24" }]}>
           <Check size={30} color="#121212" strokeWidth={3} />
         </Pressable>

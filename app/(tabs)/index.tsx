@@ -4,18 +4,21 @@ import GreetingSection from "@/components/GreetingSection";
 import HomeHeader from "@/components/HomeHeader";
 import QuickActions from "@/components/QuickActions";
 import RecentLogs from "@/components/RecentLogs";
+import SummaryPage from "@/components/SummaryPage";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { useSummaryVisible } from "@/context/SummaryVisibleContext";
 import { getForecast } from "@/utils/forecast";
 import { computeStreak } from "@/utils/streak";
 import { loadStreakMode, StreakMode } from "@/components/StreakModal";
 import { mergePomoActivities } from "@/utils/pomodoroMerge";
 import { useColorScheme } from "nativewind";
-import React, { useCallback, useEffect, useState } from "react";
-import { ScrollView } from "react-native";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Dimensions, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function TabOneScreen() {
   const { activities, deleteActivity, duplicateActivity, categories, customGoals } = useTracking();
+  const { setIsSummaryVisible } = useSummaryVisible();
   const { colorScheme } = useColorScheme();
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today");
   const [streakMode, setStreakMode] = useState<StreakMode>("logging");
@@ -125,52 +128,73 @@ export default React.memo(function TabOneScreen() {
     [activities, streakMode],
   );
 
+  const { width, height } = Dimensions.get("window");
+  const pagerRef = useRef<ScrollView>(null);
+
   return (
-    <SafeAreaView className="flex-1 bg-white dark:bg-klowk-black" edges={["top"]}>
-      <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-        <HomeHeader streak={streak} onStreakSaved={() => loadStreakMode().then(setStreakMode)} />
+    <ScrollView
+      ref={pagerRef}
+      horizontal
+      pagingEnabled
+      showsHorizontalScrollIndicator={false}
+      bounces={false}
+      style={{ flex: 1 }}
+      onLayout={() => pagerRef.current?.scrollTo({ x: width, y: 0, animated: false })}
+      onMomentumScrollEnd={(e) => {
+        const page = Math.round(e.nativeEvent.contentOffset.x / width);
+        setIsSummaryVisible(page === 0);
+      }}
+    >
+      {/* Page 0 — Summary (swipe left to reveal) */}
+      <SummaryPage activities={activities} categories={categories} width={width} />
 
-        <GreetingSection
-          klowkForecastStatus={klowkForecast.status}
-          klowkForecastMessage={klowkForecast.message}
-          todayMinsTotal={todayMinsTotal}
-          dayOfWeek={dayOfWeek}
-          dayOfMonth={dayOfMonth}
-          greetingKey={greetingKey}
-        />
+      {/* Page 1 — Home (default) */}
+      <SafeAreaView style={{ width }} className="bg-white dark:bg-klowk-black" edges={["top"]}>
+        <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
+          <HomeHeader streak={streak} onStreakSaved={() => loadStreakMode().then(setStreakMode)} />
 
-        {activities.length <= 1 && <QuickActions />}
+          <GreetingSection
+            klowkForecastStatus={klowkForecast.status}
+            klowkForecastMessage={klowkForecast.message}
+            todayMinsTotal={todayMinsTotal}
+            dayOfWeek={dayOfWeek}
+            dayOfMonth={dayOfMonth}
+            greetingKey={greetingKey}
+          />
 
-        {activities.length > 0 && (
-          <>
-            <AnalyticsRow
-              dailyChartData={dailyChartData}
-              maxWeeklyMins={maxWeeklyMins}
-              rangeMinsTotal={rangeMinsTotal}
-              trendUp={trendUp}
-              isNeutral={isNeutral}
-              trendColor={trendColor}
-              timeRange={timeRange}
-              setTimeRange={setTimeRange}
-            />
+          {activities.length <= 1 && <QuickActions />}
 
-            <BentoCards
-              categoryStats={categoryStats}
-              activeGoalsCount={activeGoalsCount}
-              customGoals={customGoals || []}
-              activities={activities}
-            />
+          {activities.length > 0 && (
+            <>
+              <AnalyticsRow
+                dailyChartData={dailyChartData}
+                maxWeeklyMins={maxWeeklyMins}
+                rangeMinsTotal={rangeMinsTotal}
+                trendUp={trendUp}
+                isNeutral={isNeutral}
+                trendColor={trendColor}
+                timeRange={timeRange}
+                setTimeRange={setTimeRange}
+              />
 
-            <RecentLogs
-              recentLogs={recentLogs}
-              categories={categories}
-              customGoals={customGoals || []}
-              deleteActivity={deleteActivity}
-              duplicateActivity={duplicateActivity}
-            />
-          </>
-        )}
-      </ScrollView>
-    </SafeAreaView>
+              <BentoCards
+                categoryStats={categoryStats}
+                activeGoalsCount={activeGoalsCount}
+                customGoals={customGoals || []}
+                activities={activities}
+              />
+
+              <RecentLogs
+                recentLogs={recentLogs}
+                categories={categories}
+                customGoals={customGoals || []}
+                deleteActivity={deleteActivity}
+                duplicateActivity={duplicateActivity}
+              />
+            </>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </ScrollView>
   );
 });

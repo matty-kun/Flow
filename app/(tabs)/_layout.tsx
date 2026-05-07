@@ -1,6 +1,7 @@
 import ActionWidget from "@/components/ActionWidget";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
+import { useSummaryVisible } from "@/context/SummaryVisibleContext";
 import { createMaterialTopTabNavigator } from "@react-navigation/material-top-tabs";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { impact } from "@/utils/haptics";
@@ -34,6 +35,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const [showSheet, setShowSheet] = useState(false);
   const router = useRouter();
 
+  const { isSummaryVisible } = useSummaryVisible();
   const isTimerRunning = !!currentActivity;
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const sheetAnim = useRef(new Animated.Value(0)).current;
@@ -106,6 +108,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         flexDirection: "row",
         alignItems: "center",
         zIndex: 1000,
+        opacity: isSummaryVisible ? 0 : 1,
+        pointerEvents: isSummaryVisible ? "none" : "auto",
       }}
     >
       <ActionWidget

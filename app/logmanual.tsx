@@ -3,6 +3,7 @@ import AddGoalModal from "@/components/AddGoalModal";
 import CategoryCardPicker from "@/components/CategoryCardPicker";
 import NewCategorySheet from "@/components/NewCategorySheet";
 import DatePickerModal from "@/components/DatePickerModal";
+import TimePickerModal from "@/components/TimePickerModal";
 import FormField from "@/components/FormField";
 import ScreenHeader from "@/components/ScreenHeader";
 import WheelPicker from "@/components/WheelPicker";
@@ -72,7 +73,10 @@ export default function EntryModal() {
   const [minutes, setMinutes] = useState(0);
   const [seconds, setSeconds] = useState(0);
   const [date, setDate] = useState(new Date());
+  const [timeHour, setTimeHour] = useState(new Date().getHours());
+  const [timeMinute, setTimeMinute] = useState(new Date().getMinutes());
   const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
   const [category, setCategory] = useState("work");
   const [description, setDescription] = useState("");
   const [selectedGoalId, setSelectedGoalId] = useState<string | null>(null);
@@ -109,7 +113,10 @@ export default function EntryModal() {
         setCategory(activityToEdit.category || "work");
         const desc = activityToEdit.description || "";
         setDescription(desc === "Pomodoro" || desc === "Pomodoro break" ? "" : desc);
-        setDate(new Date(activityToEdit.start_time));
+        const startDate = new Date(activityToEdit.start_time);
+        setDate(startDate);
+        setTimeHour(startDate.getHours());
+        setTimeMinute(startDate.getMinutes());
         if (activityToEdit.duration) {
           setHours(Math.floor(activityToEdit.duration / 3600));
           setMinutes(Math.floor((activityToEdit.duration % 3600) / 60));
@@ -151,6 +158,9 @@ export default function EntryModal() {
 
     const totalSecs = hours * 3600 + minutes * 60 + seconds;
 
+    const startDate = new Date(date);
+    startDate.setHours(timeHour, timeMinute, 0, 0);
+
     if (editId && typeof editId === "string") {
       await editActivity(
         Number(editId),
@@ -158,10 +168,10 @@ export default function EntryModal() {
         category,
         totalSecs,
         description,
-        date,
+        startDate,
       );
     } else if (totalSecs > 0) {
-      await addManualActivity(title, category, totalSecs, description, date);
+      await addManualActivity(title, category, totalSecs, description, startDate);
     } else {
       await startTracker(title, category, description);
     }
@@ -353,25 +363,42 @@ export default function EntryModal() {
               </View>
             </View>
 
-            {/* Date Picker */}
+            {/* Date + Time Picker */}
             <View className="mb-5">
               <View className="flex-row gap-2">
-              <View className="flex-[1.2]">
-                <View className="flex-row items-center mb-2">
-                  <CalendarIcon size={12} color="#9ca3af" />
-                  <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
-                    Date
-                  </Text>
+                <View className="flex-[1.2]">
+                  <View className="flex-row items-center mb-2">
+                    <CalendarIcon size={12} color="#9ca3af" />
+                    <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
+                      Date
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => { impact(ImpactFeedbackStyle.Light); setShowDatePicker(true); }}
+                    className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl border border-gray-100 dark:border-zinc-800 items-center justify-center"
+                  >
+                    <Text className="text-xs font-bold text-klowk-black dark:text-white">
+                      {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                    </Text>
+                  </Pressable>
                 </View>
-                <Pressable
-                  onPress={() => { impact(ImpactFeedbackStyle.Light); setShowDatePicker(true); }}
-                  className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl border border-gray-100 dark:border-zinc-800 items-center justify-center"
-                >
-                  <Text className="text-xs font-bold text-klowk-black dark:text-white">
-                    {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                  </Text>
-                </Pressable>
-              </View>
+
+                <View style={{ flex: 1 }}>
+                  <View className="flex-row items-center mb-2">
+                    <Clock size={12} color="#9ca3af" />
+                    <Text className="ml-1 text-[8px] font-black text-gray-400 dark:text-gray-500 uppercase">
+                      Started
+                    </Text>
+                  </View>
+                  <Pressable
+                    onPress={() => { impact(ImpactFeedbackStyle.Light); setShowTimePicker(true); }}
+                    className="bg-gray-50 dark:bg-zinc-900 h-[54px] rounded-2xl border border-gray-100 dark:border-zinc-800 items-center justify-center"
+                  >
+                    <Text className="text-xs font-bold text-klowk-black dark:text-white">
+                      {new Date(2000, 0, 1, timeHour, timeMinute).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}
+                    </Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
 
@@ -380,6 +407,13 @@ export default function EntryModal() {
               selected={date}
               onSelect={setDate}
               onClose={() => setShowDatePicker(false)}
+            />
+            <TimePickerModal
+              visible={showTimePicker}
+              hour={timeHour}
+              minute={timeMinute}
+              onConfirm={(h, m) => { setTimeHour(h); setTimeMinute(m); }}
+              onClose={() => setShowTimePicker(false)}
             />
 
             {/* Description */}
