@@ -1,4 +1,4 @@
-import ShareSessionCard from "@/components/ShareSessionCard";
+import ShareSessionCard from "@/components/log/ShareSessionCard";
 import { Category } from "@/context/TrackingContext";
 import { impact } from "@/utils/haptics";
 import * as ImagePicker from "expo-image-picker";
@@ -322,7 +322,7 @@ export default function ShareSessionScreen() {
           pointerEvents="none"
           style={{
             position: "absolute",
-            bottom: 100,
+            bottom: 200,
             alignSelf: "center",
             opacity: toastAnim,
             backgroundColor: "#121212",

@@ -1,8 +1,8 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
-import ActionSheet from "@/components/ActionSheet";
-import CategoryDetailSheet from "@/components/CategoryDetailSheet";
-import EditCategorySheet from "@/components/EditCategorySheet";
-import NewCategorySheet from "@/components/NewCategorySheet";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import ActionSheet from "@/components/ui/ActionSheet";
+import CategoryDetailSheet from "@/components/sheets/CategoryDetailSheet";
+import EditCategorySheet from "@/components/sheets/EditCategorySheet";
+import NewCategorySheet from "@/components/sheets/NewCategorySheet";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { impact } from "@/utils/haptics";
 import { ImpactFeedbackStyle } from "expo-haptics";

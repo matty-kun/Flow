@@ -1,4 +1,4 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
 import { Category } from "@/context/TrackingContext";
 import { Image } from "expo-image";
 import Animated, { AnimatedProps } from "react-native-reanimated";

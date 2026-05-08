@@ -207,7 +207,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       const ongoing = result.find((a) => a.end_time === null);
       currentActivityRef.current = ongoing || null;
       setCurrentActivity(ongoing || null);
-      setActivities(result);
+      setActivities(result.filter((a) => a.end_time !== null));
     } catch (err) {
       console.warn(
         "DB Refresh issue (resource closed/hot-reload), retrying in next cycle",

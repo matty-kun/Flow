@@ -1,4 +1,4 @@
-import ActionWidget from "@/components/ActionWidget";
+import ActionWidget from "@/components/home/ActionWidget";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
 import { useSummaryVisible } from "@/context/SummaryVisibleContext";

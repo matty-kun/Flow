@@ -1,4 +1,4 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
 import { CATEGORIES } from "@/constants/Categories";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";

@@ -46,7 +46,7 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
   } catch (error) {}
 }
 
-import FloatingTimer from "@/components/FloatingTimer";
+import FloatingTimer from "@/components/log/FloatingTimer";
 import { LanguageProvider } from "@/context/LanguageContext";
 import { SummaryVisibleProvider } from "@/context/SummaryVisibleContext";
 import AsyncStorage from "@react-native-async-storage/async-storage";

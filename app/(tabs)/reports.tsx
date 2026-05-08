@@ -1,8 +1,8 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
-import ActionSheet from "@/components/ActionSheet";
-import CategoryDetailSheet from "@/components/CategoryDetailSheet";
-import ProgressBar from "@/components/ProgressBar";
-import ToggleBar from "@/components/ToggleBar";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import ActionSheet from "@/components/ui/ActionSheet";
+import CategoryDetailSheet from "@/components/sheets/CategoryDetailSheet";
+import ProgressBar from "@/components/analytics/ProgressBar";
+import ToggleBar from "@/components/ui/ToggleBar";
 import { Text } from "react-native";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";

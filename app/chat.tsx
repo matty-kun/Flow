@@ -1,6 +1,6 @@
 import { isGeminiNanoAvailable, initGeminiNano, askGeminiNano } from "@/utils/geminiNano";
 import { askGeminiAI } from "@/utils/geminiAI";
-import { ChatBubble, TypingBubble } from "@/components/ChatBubble";
+import { ChatBubble, TypingBubble } from "@/components/home/ChatBubble";
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { useTracking } from "@/context/TrackingContext";

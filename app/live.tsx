@@ -1,13 +1,13 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
-import CategoryCardPicker from "@/components/CategoryCardPicker";
-import ScreenHeader from "@/components/ScreenHeader";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import CategoryCardPicker from "@/components/category/CategoryCardPicker";
+import ScreenHeader from "@/components/ui/ScreenHeader";
 import { useLanguage } from "@/context/LanguageContext";
 import { useTracking } from "@/context/TrackingContext";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { useRouter } from "expo-router";
-import AddGoalModal from "@/components/AddGoalModal";
-import NewCategorySheet from "@/components/NewCategorySheet";
+import AddGoalModal from "@/components/sheets/AddGoalModal";
+import NewCategorySheet from "@/components/sheets/NewCategorySheet";
 import {
   Check,
   Clock,
@@ -20,7 +20,7 @@ import {
 import { DEFAULT_POMODORO_SETTINGS, PomodoroSettings } from "@/utils/pomodoro";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
-import WheelPicker from "@/components/WheelPicker";
+import WheelPicker from "@/components/forms/WheelPicker";
 import { useColorScheme } from "nativewind";
 import React, { useRef, useState } from "react";
 import {

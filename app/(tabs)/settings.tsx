@@ -1,4 +1,4 @@
-import { Text, View } from "@/components/Themed";
+import { Text, View } from "@/components/ui/Themed";
 import {
     Bell,
     Check,

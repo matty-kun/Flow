@@ -1,10 +1,10 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
-import CategoryPillScroller from "@/components/CategoryPillScroller";
-import DatePickerModal from "@/components/DatePickerModal";
-import EmptyState from "@/components/EmptyState";
-import GoalCard from "@/components/GoalCard";
-import SectionHeader from "@/components/SectionHeader";
-import ActionSheet from "@/components/ActionSheet";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import CategoryPillScroller from "@/components/category/CategoryPillScroller";
+import DatePickerModal from "@/components/forms/DatePickerModal";
+import EmptyState from "@/components/ui/EmptyState";
+import GoalCard from "@/components/log/GoalCard";
+import SectionHeader from "@/components/ui/SectionHeader";
+import ActionSheet from "@/components/ui/ActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
 import {
   Activity,
@@ -15,7 +15,7 @@ import {
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { impact, notification } from "@/utils/haptics";
 import { sendLocalNotification } from "@/utils/notifications";
-import WheelPicker from "@/components/WheelPicker";
+import WheelPicker from "@/components/forms/WheelPicker";
 import {
   Calendar as CalendarIcon,
   Edit2,

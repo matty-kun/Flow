@@ -1,6 +1,6 @@
-import { CategoryIcon } from "@/components/CategoryIcon";
-import ActionSheet from "@/components/ActionSheet";
-import ActivityHeatmap from "@/components/ActivityHeatmap";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import ActionSheet from "@/components/ui/ActionSheet";
+import ActivityHeatmap from "@/components/analytics/ActivityHeatmap";
 import { useLanguage } from "@/context/LanguageContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { DisplayActivity, pomodoroBaseTitle } from "@/utils/pomodoroMerge";
