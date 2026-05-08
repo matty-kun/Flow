@@ -1,6 +1,6 @@
 {
   "name": "klowk",
-  "main": "expo-router/entry",
+  "main": "index.js",
   "version": "1.0.0",
   "scripts": {
     "start": "expo start",
@@ -47,6 +47,7 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "react-native": "0.81.5",
+    "react-native-android-widget": "^0.20.3",
     "react-native-css-interop": "^0.2.3",
     "react-native-pager-view": "6.9.1",
     "react-native-reanimated": "~4.1.1",

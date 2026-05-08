@@ -1,6 +1,9 @@
 import { CATEGORIES as DEFAULT_CATEGORIES } from "@/constants/Categories";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { dismissInactivityReminderForToday } from "@/utils/notifications";
+import { Platform } from "react-native";
+import { WIDGET_DATA_KEY } from "@/widget/widgetTaskHandler";
+import { computeStreak } from "@/utils/streak";
 import { useSQLiteContext } from "expo-sqlite";
 import {
     createContext,
@@ -381,6 +384,34 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       console.error("Failed to duplicate activity:", err);
     }
   };
+
+  // Sync widget data whenever activities change (Android only)
+  useEffect(() => {
+    if (Platform.OS !== "android") return;
+    const sync = async () => {
+      try {
+        const React = await import("react");
+        const { requestWidgetUpdate } = await import("react-native-android-widget");
+        const { FocusWidget } = await import("@/widget/FocusWidget");
+        const startOfToday = new Date().setHours(0, 0, 0, 0);
+        const todayMins = Math.floor(
+          activities
+            .filter((a) => a.start_time >= startOfToday && a.duration)
+            .reduce((acc, a) => acc + (a.duration || 0), 0) / 60
+        );
+        const streak = computeStreak(activities);
+        await AsyncStorage.setItem(WIDGET_DATA_KEY, JSON.stringify({ todayMins, streak }));
+        await requestWidgetUpdate({
+          widgetName: "FocusWidget",
+          renderWidget: () => React.default.createElement(FocusWidget, { todayMins, streak }),
+          widgetNotFound: () => {},
+        });
+      } catch {
+        // widget not installed or not on Android — silently ignore
+      }
+    };
+    sync();
+  }, [activities]);
 
   const getTotalFocusTimeToday = () => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);

@@ -51,6 +51,24 @@
           "photosPermission": "Allow Flow to access your photos for session cards.",
           "cameraPermission": "Allow Flow to use your camera for session cards."
         }
+      ],
+      [
+        "react-native-android-widget",
+        {
+          "widgets": [
+            {
+              "name": "FocusWidget",
+              "label": "Flow – Focus Tracker",
+              "minWidth": "180dp",
+              "minHeight": "110dp",
+              "targetCellWidth": 3,
+              "targetCellHeight": 2,
+              "description": "See today's focus time and streak at a glance",
+              "previewImage": "./assets/images/icon.png",
+              "updatePeriodMillis": 1800000
+            }
+          ]
+        }
       ]
     ],
     "experiments": {
