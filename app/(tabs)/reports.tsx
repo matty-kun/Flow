@@ -603,7 +603,8 @@ export default React.memo(function ReportsScreen() {
 
   const handleAddCategory = () => {
     if (!newCatName) return;
-    addCategory(newCatName, newCatIcon, newCatColor);
+    const formatted = newCatName.trim().charAt(0).toUpperCase() + newCatName.trim().slice(1);
+    addCategory(formatted, newCatIcon, newCatColor);
     closeAddSheet();
     setNewCatName("");
   };

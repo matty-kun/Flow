@@ -84,7 +84,8 @@ export default function NewCategorySheet({ visible, onClose, onCreated }: Props)
   const handleCreate = () => {
     const trimmed = name.trim();
     if (!trimmed) return;
-    addCategory(trimmed, icon, color, customImageUri);
+    const formatted = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    addCategory(formatted, icon, color, customImageUri);
     notification(NotificationFeedbackType.Success);
     const newId = trimmed.toLowerCase().replace(/\s+/g, "-");
     onCreated?.(newId);
