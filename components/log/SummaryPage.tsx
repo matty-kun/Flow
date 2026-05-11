@@ -99,7 +99,7 @@ export default function SummaryPage({ activities, categories, width }: Props) {
     [filtered],
   );
 
-  const recentSessions = useMemo(() => mergePomoActivities(filtered).slice(0, 5), [filtered]);
+  const recentSessions = useMemo(() => mergePomoActivities(filtered), [filtered]);
 
   const topCategory = useMemo(() => {
     const map: Record<string, number> = {};
@@ -155,29 +155,38 @@ export default function SummaryPage({ activities, categories, width }: Props) {
           {recentSessions.length === 0 ? (
             <Text style={{ fontSize: 15, color: TEXT_SUB, fontWeight: "500" }}>Nothing logged here.</Text>
           ) : (
-            recentSessions.map((log, i) => {
-              const cat = categories.find((c) => c.id === log.category);
-              return (
-                <View key={i}>
-                  <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11 }}>
-                    <View style={{
-                      width: 34, height: 34, borderRadius: 10,
-                      backgroundColor: "rgba(18,18,18,0.1)",
-                      alignItems: "center", justifyContent: "center", marginRight: 12,
-                    }}>
-                      {cat && <CategoryIcon name={cat.iconName} size={15} color={TEXT} />}
+            <ScrollView
+              style={{ maxHeight: 260 }}
+              nestedScrollEnabled={true}
+              showsVerticalScrollIndicator={false}
+            >
+              {recentSessions.map((log, i) => {
+                const cat = categories.find((c) => c.id === log.category);
+                return (
+                  <View key={i}>
+                    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11 }}>
+                      <View style={{
+                        width: 34, height: 34, borderRadius: 10,
+                        backgroundColor: "rgba(18,18,18,0.1)",
+                        alignItems: "center", justifyContent: "center", marginRight: 12,
+                      }}>
+                        {cat && <CategoryIcon name={cat.iconName} size={15} color={TEXT} />}
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT }} numberOfLines={1}>{log.title}</Text>
+                        {cat && <Text style={{ fontSize: 12, color: TEXT_SUB, marginTop: 1 }}>{cat.label}</Text>}
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT_SUB }}>
+                        {formatDuration(Math.round((log.duration || 0) / 60))}
+                      </Text>
                     </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT }} numberOfLines={1}>{log.title}</Text>
-                      {cat && <Text style={{ fontSize: 12, color: TEXT_SUB, marginTop: 1 }}>{cat.label}</Text>}
-                    </View>
-                    <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT_SUB }}>
-                      {formatDuration(Math.round((log.duration || 0) / 60))}
-                    </Text>
+                    {i < recentSessions.length - 1 && (
+                      <View style={{ height: 1, backgroundColor: "rgba(18,18,18,0.08)" }} />
+                    )}
                   </View>
-                </View>
-              );
-            })
+                );
+              })}
+            </ScrollView>
           )}
         </View>
 

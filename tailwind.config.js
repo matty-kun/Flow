@@ -20,6 +20,19 @@ module.exports = {
           teal: "#0D9488",
         },
       },
+      // Override Tailwind shadow utilities to avoid NativeWind v4 navigation context crash.
+      // NativeWind's boxShadow implementation conflicts with expo-router's NavigationContainer.
+      // Using elevation (React Native's native shadow system) is the correct approach on Android.
+      boxShadow: {
+        sm: "none",
+        DEFAULT: "none",
+        md: "none",
+        lg: "none",
+        xl: "none",
+        "2xl": "none",
+        inner: "none",
+        none: "none",
+      },
     },
   },
   plugins: [],

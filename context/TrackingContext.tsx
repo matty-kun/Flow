@@ -393,6 +393,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         const React = await import("react");
         const { requestWidgetUpdate } = await import("react-native-android-widget");
         const { FocusWidget } = await import("@/widget/FocusWidget");
+        const { StreakWidget } = await import("@/widget/StreakWidget");
         const startOfToday = new Date().setHours(0, 0, 0, 0);
         const todayMins = Math.floor(
           activities
@@ -400,10 +401,33 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
             .reduce((acc, a) => acc + (a.duration || 0), 0) / 60
         );
         const streak = computeStreak(activities);
-        await AsyncStorage.setItem(WIDGET_DATA_KEY, JSON.stringify({ todayMins, streak }));
+
+        // Which days this week (Mon=0 … Sun=6) had at least one session
+        const now = new Date();
+        const mondayOffset = (now.getDay() + 6) % 7;
+        const weekDays: boolean[] = Array(7).fill(false);
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(now);
+          d.setHours(0, 0, 0, 0);
+          d.setDate(d.getDate() - mondayOffset + i);
+          const dayStart = d.getTime();
+          const dayEnd = dayStart + 86400000;
+          weekDays[i] = activities.some(
+            (a) => a.start_time >= dayStart && a.start_time < dayEnd && !!a.duration
+          );
+        }
+
+        const data = { todayMins, streak, weekDays };
+        await AsyncStorage.setItem(WIDGET_DATA_KEY, JSON.stringify(data));
+
         await requestWidgetUpdate({
           widgetName: "FocusWidget",
-          renderWidget: () => React.default.createElement(FocusWidget, { todayMins, streak }),
+          renderWidget: () => React.default.createElement(FocusWidget, data),
+          widgetNotFound: () => {},
+        });
+        await requestWidgetUpdate({
+          widgetName: "StreakWidget",
+          renderWidget: () => React.default.createElement(StreakWidget, data),
           widgetNotFound: () => {},
         });
       } catch {

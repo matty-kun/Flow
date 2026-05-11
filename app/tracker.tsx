@@ -69,6 +69,7 @@ export default function TrackerPage() {
   const [isPaused, setIsPaused] = useState(false);
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
   const [isCompleted, setIsCompleted] = useState(false);
+  const [isOvertime, setIsOvertime] = useState(false);
   const [pomodoroWaiting, setPomodoroWaiting] = useState(false);
   const [midRoundWaiting, setMidRoundWaiting] = useState(false);
   const [roundDisplay, setRoundDisplay] = useState(1);
@@ -391,6 +392,7 @@ export default function TrackerPage() {
     if (currentActivity) {
       setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time) / 1000));
       hasAlerted.current = false;
+      setIsOvertime(false);
     }
   }, [currentActivity?.id]);
 
@@ -481,18 +483,13 @@ export default function TrackerPage() {
       return;
     }
 
-    // Non-pomodoro countdown complete
+    // Non-pomodoro countdown complete — enter overtime (keep running, show negative)
     cancelTimerCompletionNotification();
     dismissTimerOngoingNotification();
     notification(NotificationFeedbackType.Success);
     Vibration.vibrate([0, 500, 500], true);
-    (async () => {
-      playAlarm();
-      completedAtMs.current = Date.now();
-      await stopTracker();
-      clearTimerState();
-      setIsCompleted(true);
-    })();
+    playAlarm();
+    setIsOvertime(true);
   }, [accumulatedSecs]);
 
   // ── Progress ring animation ────────────────────────────────────────────────
@@ -500,6 +497,11 @@ export default function TrackerPage() {
   useEffect(() => {
     if (isCompleted) {
       progressShared.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
+      return;
+    }
+    if (isOvertime) {
+      cancelAnimation(progressShared);
+      progressShared.value = 0;
       return;
     }
     if (isPaused || !currentActivity) {
@@ -516,7 +518,7 @@ export default function TrackerPage() {
       progressShared.value = 1 - secInMinute / 60;
       progressShared.value = withTiming(0, { duration: (60 - secInMinute) * 1000, easing: Easing.linear });
     }
-  }, [currentActivity?.id, currentActivity?.start_time, isPaused, isCompleted]);
+  }, [currentActivity?.id, currentActivity?.start_time, isPaused, isCompleted, isOvertime]);
 
   const animatedProps = useAnimatedProps(() => ({
     strokeDashoffset: CIRCUMFERENCE * (1 - progressShared.value),
@@ -535,17 +537,27 @@ export default function TrackerPage() {
   const displayTitle = isPomodoroMode ? pBaseTitle : (activity?.title ?? "");
   const ringColor = isPomodoroMode
     ? phaseDisplay === "break" ? "#14b8a6" : "#FBBF24"
-    : "#60a5fa";
+    : isOvertime ? "#ef4444" : "#60a5fa";
 
   let displayTime = "";
   if (isCountdown) {
-    const remaining = Math.max(0, targetSecs - accumulatedSecs);
-    const h = Math.floor(remaining / 3600);
-    const m = Math.floor((remaining % 3600) / 60);
-    const s = remaining % 60;
-    displayTime = h > 0
-      ? `${h}:${(m % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-      : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    const raw = targetSecs - accumulatedSecs;
+    if (raw < 0) {
+      const over = -raw;
+      const h = Math.floor(over / 3600);
+      const m = Math.floor((over % 3600) / 60);
+      const s = over % 60;
+      displayTime = h > 0
+        ? `-${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+        : `-${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    } else {
+      const h = Math.floor(raw / 3600);
+      const m = Math.floor((raw % 3600) / 60);
+      const s = raw % 60;
+      displayTime = h > 0
+        ? `${h}:${(m % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
+        : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+    }
   } else {
     const h = Math.floor(accumulatedSecs / 3600);
     const m = Math.floor((accumulatedSecs % 3600) / 60);

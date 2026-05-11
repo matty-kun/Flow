@@ -1,9 +1,9 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
 import { formatDuration } from "@/utils/time";
-import { Image } from "expo-image";
+import { useColorScheme } from "nativewind";
 import React from "react";
-import { Text, View } from "react-native";
+import { Image, Text, View } from "react-native";
 
 const FORECAST_MESSAGES: Record<string, Record<string, string>> = {
   on_track: {
@@ -72,6 +72,29 @@ interface Props {
   greetingKey: string;
 }
 
+function FlowCharacter() {
+  return (
+    <View className="relative items-center justify-center">
+      <View
+        className="absolute rounded-full"
+        style={{
+          width: 110,
+          height: 26,
+          bottom: -10,
+          left: 10,
+          backgroundColor: "rgba(0,0,0,0.18)",
+          transform: [{ scaleX: 1.15 }],
+        }}
+      />
+      <Image
+        source={require("../../assets/images/icon.png")}
+        style={{ width: 155, height: 155 }}
+        resizeMode="contain"
+        accessibilityLabel="Flow character"
+      />
+    </View>
+  );
+}
 
 export default function GreetingSection({
   klowkForecastStatus,
@@ -83,18 +106,26 @@ export default function GreetingSection({
 }: Props) {
   const { t, language } = useLanguage();
   const { userName } = useOnboarding();
-  const bubbleText = klowkForecastStatus === "no_goal"
-    ? (() => {
-        const lang = language === "tl" ? "tl" : "en";
-        const dayIdx = new Date().getDate();
-        if (todayMinsTotal > 0) {
-          const pool = FLOW_SAYINGS.win[lang];
-          return pool[dayIdx % pool.length].replace("{time}", formatDuration(Math.floor(todayMinsTotal / 60)));
-        }
-        const pool = FLOW_SAYINGS.ready[lang];
-        return pool[dayIdx % pool.length];
-      })()
-    : (FORECAST_MESSAGES[klowkForecastStatus]?.[language === "tl" ? "tl" : "en"] ?? klowkForecastMessage);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
+  const bubbleText =
+    klowkForecastStatus === "no_goal"
+      ? (() => {
+          const lang = language === "tl" ? "tl" : "en";
+          const dayIdx = new Date().getDate();
+          if (todayMinsTotal > 0) {
+            const pool = FLOW_SAYINGS.win[lang];
+            return pool[dayIdx % pool.length].replace(
+              "{time}",
+              formatDuration(Math.floor(todayMinsTotal / 60)),
+            );
+          }
+          const pool = FLOW_SAYINGS.ready[lang];
+          return pool[dayIdx % pool.length];
+        })()
+      : (FORECAST_MESSAGES[klowkForecastStatus]?.[
+          language === "tl" ? "tl" : "en"
+        ] ?? klowkForecastMessage);
 
   return (
     <View className="px-6 mb-8 mt-3">
@@ -109,15 +140,13 @@ export default function GreetingSection({
       </Text>
 
       <View className="relative items-center justify-center -mt-12">
-        <View className="absolute -left-6 -right-6 h-[56px] bg-klowk-orange" style={{ top: "52%" }} />
+        <View
+          className="absolute -left-6 -right-6 h-[56px] bg-klowk-orange"
+          style={{ top: "52%" }}
+        />
         <View className="flex-row items-center justify-between mt-9">
-          <View className="w-40 h-40 items-center justify-center -mt-10">
-            <Image
-              source={require("../../assets/video/flow moving.webp")}
-              style={{ width: 175, height: 175 }}
-              contentFit="contain"
-              autoplay
-            />
+          <View className="w-40 h-40 items-center justify-center -mt-14">
+            <FlowCharacter />
           </View>
           <View className="relative bg-white dark:bg-zinc-900 p-4 rounded-[32px] shadow-sm w-[55%] border border-gray-50 dark:border-zinc-800 -mt-6 ml-2">
             <View className="absolute -left-2 top-6 w-4 h-4 bg-white dark:bg-zinc-900 border-l border-b border-gray-50 dark:border-zinc-800 rotate-[45deg]" />

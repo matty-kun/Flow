@@ -1,4 +1,4 @@
-import CategoryPillScroller from "@/components/category/CategoryPillScroller";
+import CategoryCardPicker from "@/components/category/CategoryCardPicker";
 import DatePickerModal from "@/components/forms/DatePickerModal";
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
@@ -31,7 +31,7 @@ type Props = {
 export default function AddGoalModal({ visible, onClose }: Props) {
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const { categories, addCustomGoal } = useTracking();
+  const { categories, addCustomGoal, activities } = useTracking();
   const { t } = useLanguage();
 
   const [goalName, setGoalName] = useState("");
@@ -122,9 +122,24 @@ export default function AddGoalModal({ visible, onClose }: Props) {
             <Animated.View style={{ transform: [{ translateY: sheetSlide }] }}>
               <Pressable
                 onPress={(e) => e.stopPropagation()}
-                style={{ backgroundColor: isDark ? "#1C1C1E" : "#fff", borderTopLeftRadius: 40, borderTopRightRadius: 40, padding: 32, paddingBottom: 48, maxHeight: height * 0.9 }}
+                style={{
+                  backgroundColor: isDark ? "#1C1C1E" : "#fff",
+                  borderTopLeftRadius: 40,
+                  borderTopRightRadius: 40,
+                  height: height * 0.9,
+                }}
               >
-                <ScrollView ref={scrollRef} showsVerticalScrollIndicator={false} bounces={false} scrollEnabled={sheetScrollEnabled}>
+                <ScrollView
+                  ref={scrollRef}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: 32, paddingBottom: 120 }}
+                  showsVerticalScrollIndicator={false}
+                  bounces={false}
+                  scrollEnabled={sheetScrollEnabled}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  nestedScrollEnabled
+                >
                   {/* Header */}
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 28 }}>
                     <Text style={{ fontSize: 24, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>
@@ -154,7 +169,12 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                     {t("category_label")}
                   </Text>
                   <View style={{ marginBottom: 24 }}>
-                    <CategoryPillScroller categories={categories} selectedId={selectedCatId} onSelect={setSelectedCatId} layout="scroll" />
+                    <CategoryCardPicker
+                      categories={categories}
+                      selectedId={selectedCatId}
+                      onSelect={setSelectedCatId}
+                      activities={activities}
+                    />
                   </View>
 
                   {/* Target */}
@@ -219,18 +239,51 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                       </View>
                     ))}
                   </View>
+                </ScrollView>
 
-                  {/* Save */}
+                {/* Floating Save — sits above sheet bottom, no full-width footer bar */}
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 20,
+                    alignItems: "center",
+                    paddingHorizontal: 28,
+                  }}
+                >
                   <Pressable
                     onPress={handleSave}
                     disabled={!isFormValid}
-                    style={{ paddingVertical: 18, borderRadius: 24, alignItems: "center", justifyContent: "center", backgroundColor: !isFormValid ? (isDark ? "rgba(251,191,36,0.15)" : "#f3f4f6") : "#FBBF24", marginBottom: 16 }}
+                    style={{
+                      width: "100%",
+                      maxWidth: 340,
+                      paddingVertical: 16,
+                      borderRadius: 24,
+                      alignItems: "center",
+                      justifyContent: "center",
+                      backgroundColor: !isFormValid ? (isDark ? "rgba(251,191,36,0.15)" : "#f3f4f6") : "#FBBF24",
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: isDark ? 0.45 : 0.18,
+                      shadowRadius: 16,
+                      elevation: 10,
+                    }}
                   >
-                    <Text style={{ fontSize: 15, fontWeight: "900", color: !isFormValid ? (isDark ? "rgba(251,191,36,0.4)" : "#9ca3af") : "#fff", textTransform: "uppercase", letterSpacing: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "900",
+                        color: !isFormValid ? (isDark ? "rgba(251,191,36,0.4)" : "#9ca3af") : "#fff",
+                        textTransform: "uppercase",
+                        letterSpacing: 1,
+                      }}
+                    >
                       Save Goal
                     </Text>
                   </Pressable>
-                </ScrollView>
+                </View>
               </Pressable>
             </Animated.View>
           </Animated.View>

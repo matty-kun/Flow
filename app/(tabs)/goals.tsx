@@ -1,5 +1,5 @@
 import { CategoryIcon } from "@/components/category/CategoryIcon";
-import CategoryPillScroller from "@/components/category/CategoryPillScroller";
+import CategoryCardPicker from "@/components/category/CategoryCardPicker";
 import DatePickerModal from "@/components/forms/DatePickerModal";
 import EmptyState from "@/components/ui/EmptyState";
 import GoalCard from "@/components/log/GoalCard";
@@ -131,6 +131,7 @@ export default function GoalsScreen() {
   const [targetMinutes, setTargetMinutes] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
   const scrollRef = useRef<ScrollView>(null);
+  const [sheetScrollEnabled, setSheetScrollEnabled] = useState(true);
   const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
   const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
@@ -597,15 +598,19 @@ const now = Date.now();
                   backgroundColor: isDark ? "#1C1C1E" : "#fff",
                   borderTopLeftRadius: 40,
                   borderTopRightRadius: 40,
-                  padding: 32,
-                  paddingBottom: 48,
-                  maxHeight: height * 0.9,
+                  height: height * 0.9,
                 }}
               >
                 <ScrollView
                   ref={scrollRef}
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ padding: 32, paddingBottom: 120 }}
                   showsVerticalScrollIndicator={false}
                   bounces={false}
+                  scrollEnabled={sheetScrollEnabled}
+                  keyboardShouldPersistTaps="handled"
+                  keyboardDismissMode="on-drag"
+                  nestedScrollEnabled
                 >
                   {/* Sheet header */}
                   <View
@@ -690,11 +695,11 @@ const now = Date.now();
                     {t("category_label")}
                   </Text>
                   <View style={{ marginBottom: 24 }}>
-                    <CategoryPillScroller
+                    <CategoryCardPicker
                       categories={categories}
                       selectedId={selectedCatId}
                       onSelect={setSelectedCatId}
-                      layout="scroll"
+                      activities={activities}
                     />
                   </View>
 
@@ -703,6 +708,9 @@ const now = Date.now();
                     Target
                   </Text>
                   <View
+                    onTouchStart={() => setSheetScrollEnabled(false)}
+                    onTouchEnd={() => setSheetScrollEnabled(true)}
+                    onTouchCancel={() => setSheetScrollEnabled(true)}
                     style={{
                       backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
                       borderRadius: 20,
@@ -845,13 +853,26 @@ const now = Date.now();
                       </Pressable>
                     </View>
                   </View>
+                </ScrollView>
 
-                  {/* Create button */}
+                <View
+                  pointerEvents="box-none"
+                  style={{
+                    position: "absolute",
+                    left: 0,
+                    right: 0,
+                    bottom: 20,
+                    alignItems: "center",
+                    paddingHorizontal: 28,
+                  }}
+                >
                   <Pressable
                     onPress={handleSaveGoal}
                     disabled={!isFormValid}
                     style={{
-                      paddingVertical: 18,
+                      width: "100%",
+                      maxWidth: 340,
+                      paddingVertical: 16,
                       borderRadius: 24,
                       alignItems: "center",
                       justifyContent: "center",
@@ -860,7 +881,11 @@ const now = Date.now();
                           ? "rgba(251,191,36,0.15)"
                           : "#f3f4f6"
                         : "#FBBF24",
-                      marginBottom: 16,
+                      shadowColor: "#000",
+                      shadowOffset: { width: 0, height: 8 },
+                      shadowOpacity: isDark ? 0.45 : 0.18,
+                      shadowRadius: 16,
+                      elevation: 10,
                     }}
                   >
                     <Text
@@ -879,7 +904,7 @@ const now = Date.now();
                       {editId ? "Save Changes" : "Save Goal"}
                     </Text>
                   </Pressable>
-                </ScrollView>
+                </View>
               </Pressable>
             </Animated.View>
             </Animated.View>

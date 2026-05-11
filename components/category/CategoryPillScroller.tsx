@@ -69,7 +69,14 @@ export default function CategoryPillScroller({ categories, selectedId, onSelect,
   }
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      nestedScrollEnabled
+      directionalLockEnabled
+      keyboardShouldPersistTaps="handled"
+      contentContainerStyle={{ paddingRight: 6 }}
+    >
       <View style={{ flexDirection: "row" }}>{pills}</View>
     </ScrollView>
   );

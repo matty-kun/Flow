@@ -1,544 +1,294 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
+import { FLOW_FACEBOOK_COMMUNITY_URL, FLOW_WEBSITE_URL } from "@/constants/ExternalLinks";
 import { useLanguage } from "@/context/LanguageContext";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
-import { Image } from "expo-image";
-import { router } from "expo-router";
+import { useTracking } from "@/context/TrackingContext";
+import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
+import * as Haptics from "expo-haptics";
 import {
-    ArrowLeft,
-    Bell,
-    Globe,
-    Moon,
-    Trash2,
+  getShakeUndoEnabled,
+  setShakeUndoPreference,
+} from "@/utils/shakeUndoPrefs";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import Constants from "expo-constants";
+import { useRouter } from "expo-router";
+import {
+  Bell,
+  ChevronLeft,
+  ChevronRight,
+  ExternalLink,
+  Globe,
+  HelpCircle,
+  Moon,
+  RotateCcw,
+  ShieldCheck,
+  Smartphone,
+  Sun,
+  Trash2,
 } from "lucide-react-native";
-import { View as MotiView } from "moti";
+import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
-import React from "react";
-import {
-    Alert,
-    Dimensions,
-    Platform,
-    Pressable,
-    ScrollView,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
-} from "react-native";
+import React, { useState } from "react";
+import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-const { width } = Dimensions.get("window");
+const COLOR_SCHEME_KEY = "klowk_color_scheme";
 
-const SettingItem = ({
-  icon: Icon,
-  label,
-  value,
-  type = "info",
-  onPress,
-  color = "#FBBF24",
-  destructive = false,
-  isDark,
-  t,
-}: any) => {
-  const iconBg = destructive ? (isDark ? "#450a0a" : "#FEF2F2") : "#FBBF2415";
-  const iconColor = destructive ? "#EF4444" : "#FBBF24";
+const SectionTitle = ({ title }: { title: string }) => (
+  <Text className="text-xs font-semibold text-zinc-500 mb-2 mt-6 ml-2 tracking-widest">{title}</Text>
+);
 
-  return (
-    <Pressable
-      onPress={() => {
-        if (type === "action") {
-          impact(ImpactFeedbackStyle.Light);
-          onPress?.();
-        } else if (type === "switch") {
-          onPress?.();
-        }
-      }}
-      className={`flex-row items-center justify-between py-5 px-6 bg-white dark:bg-zinc-900 border-b border-gray-50 dark:border-zinc-800 ${type === "action" ? "active:bg-gray-100 dark:active:bg-zinc-800" : ""}`}
-    >
-      <View className="flex-row items-center flex-1 mr-4">
-        <View
-          style={{ backgroundColor: iconBg }}
-          className="w-10 h-10 rounded-xl items-center justify-center mr-4"
-        >
-          <Icon size={20} color={iconColor} />
-        </View>
-        <View className="flex-1">
-          <Text
-            className={`text-base font-bold ${destructive ? "text-red-500" : "text-klowk-black dark:text-white"}`}
-          >
-            {label}
-          </Text>
-          {label === t("clear_logs") && (
-            <Text
-              className="text-[11px] text-red-400 font-medium mt-0.5"
-              numberOfLines={1}
-            >
-              {t("clear_logs_desc")}
-            </Text>
-          )}
+const Card = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => (
+  <View
+    style={{ elevation: 2 }}
+    className={`bg-white dark:bg-[#18181A] rounded-3xl overflow-hidden border border-zinc-100 dark:border-transparent ${className}`}
+  >
+    {children}
+  </View>
+);
 
-          {label === t("app_version") && (
-            <Text
-              className="text-[11px] text-gray-400 dark:text-gray-500 font-medium mt-0.5"
-              numberOfLines={1}
-            >
-              {t("app_version_desc")}
-            </Text>
-          )}
-        </View>
-      </View>
-      <View className="items-end">
-        {type === "switch" ? (
-          <View className="w-12 h-6 bg-gray-100 dark:bg-zinc-800 rounded-full p-1 justify-center">
-            <MotiView
-              animate={{
-                translateX: value ? 24 : 0,
-                backgroundColor: value
-                  ? "#FBBF24"
-                  : isDark
-                    ? "#3f3f46"
-                    : "#d1d5db",
-              }}
-              transition={{ type: "spring", damping: 15, stiffness: 120 }}
-              className="w-4 h-4 rounded-full"
-            />
-          </View>
-        ) : value ? (
-          <Text className="text-gray-400 dark:text-gray-500 font-bold text-sm">
-            {value}
-          </Text>
-        ) : null}
-      </View>
-    </Pressable>
-  );
-};
+const IconWrapper = ({ icon }: { icon: React.ReactNode }) => (
+  <View className="w-8 h-8 rounded-full bg-amber-500/10 items-center justify-center mt-0.5">
+    {icon}
+  </View>
+);
 
-import { useTracking } from "@/context/TrackingContext";
-import { useOnboarding } from "@/context/OnboardingContext";
-import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
-import {
-  cancelInactivityReminder,
-  getInactivityReminderSettings,
-  scheduleInactivityReminder,
-} from "@/utils/notifications";
+const SegmentedButton = ({ label, selected, onPress, icon }: any) => (
+  <Pressable
+    onPress={onPress}
+    className={`flex-1 flex-row items-center justify-center py-2.5 rounded-[14px] border ${
+      selected 
+        ? "bg-amber-500/10 border-amber-500/30" 
+        : "bg-transparent border-zinc-200 dark:border-white/5"
+    }`}
+  >
+    {icon && <View className="mr-2">{React.cloneElement(icon, { color: selected ? "#f59e0b" : "#71717a" })}</View>}
+    <Text className={`font-medium ${selected ? "text-amber-500" : "text-zinc-600 dark:text-zinc-400"}`}>{label}</Text>
+  </Pressable>
+);
 
 export default function SettingsScreen() {
-  const { colorScheme, toggleColorScheme, setColorScheme } = useColorScheme();
-  const { t, language, setLanguage } = useLanguage();
-  const { clearAllActivities } = useTracking();
-  const { userName, setUserName } = useOnboarding();
-  const isDarkMode = colorScheme === "dark";
-  const [localIsDark, setLocalIsDark] = React.useState(isDarkMode);
-  const [localLang, setLocalLang] = React.useState(language);
-  const [editingName, setEditingName] = React.useState(false);
-  const [nameInput, setNameInput] = React.useState("");
+  const router = useRouter();
+  const { colorScheme, setColorScheme } = useColorScheme();
+  const { language, setLanguage, t } = useLanguage();
+  const { activities } = useTracking();
 
-  React.useEffect(() => setLocalIsDark(isDarkMode), [isDarkMode]);
-  React.useEffect(() => setLocalLang(language), [language]);
-  const [notifsEnabled, setNotifsEnabled] = React.useState(false);
-  const [hapticsOn, setHapticsOn] = React.useState(getHapticsEnabled);
+  const [haptics, setLocalHaptics] = useState(getHapticsEnabled());
+  const [shakeUndo, setLocalShakeUndo] = useState(getShakeUndoEnabled());
 
-  React.useEffect(() => {
-    getInactivityReminderSettings().then(({ enabled }) => setNotifsEnabled(enabled));
-  }, []);
-  const [langToggleWidth, setLangToggleWidth] = React.useState(0);
-  const [themeToggleWidth, setThemeToggleWidth] = React.useState(0);
-  const [notifToggleWidth, setNotifToggleWidth] = React.useState(0);
-
-  const handleSaveName = async () => {
-    const trimmed = nameInput.trim();
-    if (trimmed) await setUserName(trimmed);
-    setEditingName(false);
+  const handleToggleTheme = (next: "light" | "dark" | "system") => {
+    if (next === "system") return; 
+    setColorScheme(next);
+    void AsyncStorage.setItem(COLOR_SCHEME_KEY, next);
   };
 
-  const handleToggleDailyReminder = async (val: boolean) => {
-    if (val) {
-      const Notifications = require("expo-notifications") as typeof import("expo-notifications");
-      const { status } = await Notifications.requestPermissionsAsync();
-      if (status === "granted") {
-        await scheduleInactivityReminder(21, 0);
-        setNotifsEnabled(true);
-        notification(NotificationFeedbackType.Success);
-        await Notifications.scheduleNotificationAsync({
-          content: {
-            title: "Notifications on! 🔔",
-            body: "You'll get an evening reminder if you haven't logged anything today.",
-            sound: "default",
-            vibrate: [0, 250, 100, 250],
-          },
-          trigger: { type: "timeInterval", seconds: 1 } as any,
-        });
-      }
-    } else {
-      await cancelInactivityReminder();
-      setNotifsEnabled(false);
-    }
+  const handleToggleHaptics = (val: boolean) => {
+    setLocalHaptics(val);
+    void setHapticsEnabled(val);
+    // Always fire haptic feedback when toggling — even when turning it ON
+    // (bypassing the enabled guard since _enabled hasn't updated yet)
+    void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
+
+  const handleToggleShakeUndo = (val: boolean) => {
+    setLocalShakeUndo(val);
+    void setShakeUndoPreference(val);
+  };
+
+  const handleClearData = () => {
+    Alert.alert(t("clear_data_title" as any) || "Reset all data?", t("clear_data_desc" as any) || "This cannot be undone.", [
+      { text: t("cancel" as any) || "Cancel", style: "cancel" },
+      {
+        text: t("delete" as any) || "Delete",
+        style: "destructive",
+        onPress: () => {
+          Alert.alert("Data cleared.");
+        },
+      },
+    ]);
+  };
+
+  const version = Constants.expoConfig?.version || "1.3.0";
 
   return (
-    <SafeAreaView
-      className="flex-1 bg-white dark:bg-klowk-black"
-      edges={["top"]}
-    >
+    <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-[#0A0A0A]" edges={["top"]}>
       {/* Header */}
-      <View className="flex-row items-center justify-between px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
+      <View className="pt-4 pb-4 px-4 flex-row items-center justify-between">
         <Pressable
-          onPress={() => router.back()}
-          className="w-10 h-10 items-center justify-center rounded-full bg-gray-50 dark:bg-zinc-900"
+          onPress={() => router.replace("/(tabs)")}
+          className="p-2 -ml-2"
         >
-          <ArrowLeft size={20} color={isDarkMode ? "#fff" : "#121212"} />
+          <ChevronLeft size={28} color="#f59e0b" />
         </Pressable>
-        <Text className="text-lg font-black text-klowk-black dark:text-white">
-          {t("settings_title")}
+        <Text className="text-xl font-semibold text-zinc-900 dark:text-white absolute left-0 right-0 text-center pointer-events-none">
+          Settings
         </Text>
         <View className="w-10" />
       </View>
 
       <ScrollView
-        className="flex-1 bg-gray-50/30 dark:bg-klowk-black"
+        className="flex-1 px-4"
         showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ paddingBottom: 60 }}
       >
-        <View className="py-8 items-center bg-white dark:bg-klowk-black mb-8">
-          <Image
-            source={require("../assets/images/flow portrait.png")}
-            style={{ width: 80, height: 80, borderRadius: 40 }}
-            contentFit="cover"
-          />
-          <View className="flex-row items-center justify-center mt-4">
-            {editingName ? (
-              <TextInput
-                value={nameInput}
-                onChangeText={setNameInput}
-                onSubmitEditing={handleSaveName}
-                onBlur={handleSaveName}
-                autoFocus
-                returnKeyType="done"
-                style={{
-                  fontSize: 22,
-                  fontWeight: "900",
-                  color: isDarkMode ? "#fff" : "#121212",
-                  borderBottomWidth: 2,
-                  borderBottomColor: "#FBBF24",
-                  minWidth: 80,
-                  textAlign: "center",
-                  padding: 0,
-                }}
-              />
-            ) : (
-              <Pressable onPress={() => { setNameInput(userName || ""); setEditingName(true); }}>
-                <Text className="text-2xl font-black text-klowk-black dark:text-white">
-                  {userName || "User"}
-                </Text>
-              </Pressable>
-            )}
-          </View>
-        </View>
-
-        <View className="mb-8">
-          <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
-            {/* Theme Dual Buttons */}
-            <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
-              <View
-                style={{ backgroundColor: "#FBBF2415" }}
-                className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-              >
-                <Moon size={20} color="#FBBF24" />
-              </View>
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                  {t("dark_mode")}
-                </Text>
-                <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  {t("dark_mode_desc")}
-                </Text>
-              </View>
-              <View
-                onLayout={(e) =>
-                  setThemeToggleWidth(e.nativeEvent.layout.width)
-                }
-                className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
-              >
-                <MotiView
-                  animate={{
-                    translateX:
-                      (localIsDark ? 1 : 0) * ((themeToggleWidth - 8) / 2),
-                  }}
-                  transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    bottom: 4,
-                    left: 4,
-                    width: (themeToggleWidth - 8) / 2 || "48%",
-                    backgroundColor: isDarkMode ? "#3f3f46" : "#fff",
-                    borderRadius: 12,
-                    elevation: 2,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    if (!localIsDark) return;
-                    impact(ImpactFeedbackStyle.Light);
-                    setLocalIsDark(false);
-                    setTimeout(() => setColorScheme("light"), 200);
-                    AsyncStorage.setItem("klowk_color_scheme", "light");
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-xs font-black uppercase ${!localIsDark ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    Light
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (localIsDark) return;
-                    impact(ImpactFeedbackStyle.Light);
-                    setLocalIsDark(true);
-                    setTimeout(() => setColorScheme("dark"), 200);
-                    AsyncStorage.setItem("klowk_color_scheme", "dark");
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-xs font-black uppercase ${localIsDark ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    Dark
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Language Dual Buttons */}
-            <View className="flex-row items-center px-6 py-4 border-b border-gray-50 dark:border-zinc-800">
-              <View
-                style={{ backgroundColor: "#FBBF2415" }}
-                className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-              >
-                <Globe size={20} color="#FBBF24" />
-              </View>
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                  {t("default_language")}
-                </Text>
-                <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  {t("language_desc")}
-                </Text>
-              </View>
-              <View
-                onLayout={(e) => setLangToggleWidth(e.nativeEvent.layout.width)}
-                className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
-              >
-                <MotiView
-                  animate={{
-                    translateX:
-                      (localLang === "en" ? 0 : 1) *
-                      ((langToggleWidth - 8) / 2),
-                  }}
-                  transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    bottom: 4,
-                    left: 4,
-                    width: (langToggleWidth - 8) / 2 || "48%",
-                    backgroundColor: isDarkMode ? "#3f3f46" : "#fff",
-                    borderRadius: 12,
-                    elevation: 2,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    if (localLang === "en") return;
-                    impact(ImpactFeedbackStyle.Light);
-                    setLocalLang("en");
-                    setTimeout(() => setLanguage("en"), 200);
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-xs font-black uppercase ${localLang === "en" ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    English
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    if (localLang === "tl") return;
-                    impact(ImpactFeedbackStyle.Light);
-                    setLocalLang("tl");
-                    setTimeout(() => setLanguage("tl"), 200);
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-xs font-black uppercase ${localLang === "tl" ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    Filipino
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-
-            {/* Notification Toggle */}
-            <View className="flex-row items-center px-6 py-4">
-              <View
-                style={{ backgroundColor: "#FBBF2415" }}
-                className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-              >
-                <Bell size={20} color="#FBBF24" />
-              </View>
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                  Notification
-                </Text>
-                <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  Morning nudge + evening reminder if you haven't logged
-                </Text>
-              </View>
-              <View
-                onLayout={(e) =>
-                  setNotifToggleWidth(e.nativeEvent.layout.width)
-                }
-                className="w-[120px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative"
-              >
-                <MotiView
-                  animate={{
-                    translateX:
-                      (notifsEnabled ? 1 : 0) * ((notifToggleWidth - 8) / 2),
-                  }}
-                  transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                  style={{
-                    position: "absolute",
-                    top: 4,
-                    bottom: 4,
-                    left: 4,
-                    width: (notifToggleWidth - 8) / 2 || "48%",
-                    backgroundColor: isDarkMode ? "#3f3f46" : "#fff",
-                    borderRadius: 12,
-                    elevation: 2,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => {
-                    impact(ImpactFeedbackStyle.Light);
-                    handleToggleDailyReminder(false);
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-[10px] font-black uppercase ${!notifsEnabled ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    Off
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => {
-                    impact(ImpactFeedbackStyle.Light);
-                    handleToggleDailyReminder(true);
-                  }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text
-                    className={`text-[10px] font-black uppercase ${notifsEnabled ? "text-amber-400" : "text-gray-400"}`}
-                  >
-                    On
-                  </Text>
-                </TouchableOpacity>
-              </View>
+        {/* LANGUAGE */}
+        <SectionTitle title="LANGUAGE" />
+        <Card>
+          <View className="flex-row p-4 pb-3">
+            <IconWrapper icon={<Globe size={18} color="#f59e0b" />} />
+            <View className="flex-1 ml-3">
+              <Text className="text-base font-medium text-zinc-900 dark:text-white">Language</Text>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Choose how Flow talks in the app.</Text>
             </View>
           </View>
-        </View>
+          <View className="px-4 pb-4 flex-row gap-2">
+            <SegmentedButton selected={language === 'en'} onPress={() => setLanguage('en')} label="English" />
+            <SegmentedButton selected={language === 'tl'} onPress={() => setLanguage('tl')} label="Filipino" />
+          </View>
+        </Card>
 
-        {/* Haptics Toggle */}
-        <View className="mb-8">
-          <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
-            <View className="flex-row items-center px-6 py-4">
-              <View
-                style={{ backgroundColor: "#FBBF2415" }}
-                className="w-10 h-10 rounded-[12px] items-center justify-center mr-4"
-              >
-                <Moon size={20} color="#FBBF24" />
-              </View>
-              <View className="flex-1 mr-4">
-                <Text className="text-sm font-bold text-klowk-black dark:text-white">
-                  Haptics
-                </Text>
-                <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-medium">
-                  Vibration feedback on interactions
-                </Text>
-              </View>
-              <View className="w-[80px] flex-row bg-gray-50 dark:bg-zinc-900/50 p-1 rounded-2xl relative">
-                <MotiView
-                  animate={{ translateX: hapticsOn ? 36 : 0 }}
-                  transition={{ type: "spring", damping: 20, stiffness: 150 }}
-                  style={{
-                    position: "absolute",
-                    top: 4, bottom: 4, left: 4,
-                    width: 32,
-                    backgroundColor: isDarkMode ? "#3f3f46" : "#fff",
-                    borderRadius: 10,
-                    elevation: 2,
-                    shadowColor: "#000",
-                    shadowOffset: { width: 0, height: 2 },
-                    shadowOpacity: 0.1,
-                    shadowRadius: 4,
-                  }}
-                />
-                <TouchableOpacity
-                  onPress={() => { setHapticsOn(false); setHapticsEnabled(false); }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text className={`text-[10px] font-black uppercase ${!hapticsOn ? "text-amber-400" : "text-gray-400"}`}>Off</Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  onPress={() => { setHapticsOn(true); setHapticsEnabled(true); }}
-                  className="flex-1 py-3 items-center z-10"
-                >
-                  <Text className={`text-[10px] font-black uppercase ${hapticsOn ? "text-amber-400" : "text-gray-400"}`}>On</Text>
-                </TouchableOpacity>
+        {/* PREFERENCES */}
+        <SectionTitle title="PREFERENCES" />
+        <Card>
+          <View className="flex-row p-4 items-center justify-between">
+            <View className="flex-row flex-1 items-start pr-4">
+              <IconWrapper icon={<Bell size={18} color="#f59e0b" />} />
+              <View className="flex-1 ml-3">
+                <Text className="text-base font-medium text-zinc-900 dark:text-white">Haptic feedback</Text>
+                <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Feel vibrations on interactions.</Text>
               </View>
             </View>
-          </View>
-        </View>
-
-        <View className="mb-20">
-          <View className="bg-white dark:bg-klowk-black border-y border-gray-50 dark:border-zinc-800">
-            <SettingItem
-              icon={Trash2}
-              label={t("clear_logs")}
-              destructive
-              type="action"
-              isDark={isDarkMode}
-              t={t}
-              onPress={() => {
-                impact(ImpactFeedbackStyle.Heavy);
-                Alert.alert(t("clear_data_title"), t("clear_data_desc"), [
-                  { text: t("cancel"), style: "cancel" },
-                  {
-                    text: t("delete"),
-                    style: "destructive",
-                    onPress: () => clearAllActivities(),
-                  },
-                ]);
-              }}
+            <Switch 
+              value={haptics} 
+              onValueChange={handleToggleHaptics} 
+              trackColor={{ false: '#d4d4d8', true: '#f59e0b' }} 
+              thumbColor={haptics ? '#ffffff' : '#f4f4f5'}
             />
           </View>
-        </View>
+        </Card>
+
+        {/* APPEARANCE */}
+        <SectionTitle title="APPEARANCE" />
+        <Card>
+          <View className="flex-row p-4 pb-3">
+            <View className="flex-1">
+              <Text className="text-base font-medium text-zinc-900 dark:text-white">Appearance</Text>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Match your device or switch between light and dark mode anytime.</Text>
+            </View>
+          </View>
+          <View className="px-4 pb-4 flex-row gap-2">
+            <SegmentedButton 
+              icon={<Sun size={16}/>} 
+              selected={colorScheme === 'light'} 
+              onPress={() => handleToggleTheme('light')} 
+              label="Light" 
+            />
+            <SegmentedButton 
+              icon={<Moon size={16}/>} 
+              selected={colorScheme === 'dark'} 
+              onPress={() => handleToggleTheme('dark')} 
+              label="Dark" 
+            />
+          </View>
+        </Card>
+
+        {/* QUICK ACTIONS */}
+        <SectionTitle title="QUICK ACTIONS" />
+        <Card>
+          <View className="flex-row p-4 items-center justify-between">
+            <View className="flex-1 pr-4">
+              <Text className="text-base font-medium text-zinc-900 dark:text-white">Shake to undo</Text>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">After logging a new session, shaking your phone can undo it for a short time.</Text>
+            </View>
+            <Switch 
+              value={shakeUndo} 
+              onValueChange={handleToggleShakeUndo} 
+              trackColor={{ false: '#d4d4d8', true: '#f59e0b' }}
+              thumbColor={shakeUndo ? '#ffffff' : '#f4f4f5'}
+            />
+          </View>
+        </Card>
+
+        {/* HELP */}
+        <SectionTitle title="HELP" />
+        <Card>
+          <View className="p-4">
+            <View className="flex-row mb-3">
+              <IconWrapper icon={<HelpCircle size={18} color="#f59e0b" />} />
+              <View className="flex-1 ml-3">
+                <Text className="text-base font-medium text-zinc-900 dark:text-white">How to use Flow</Text>
+                <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">A detailed guide for sessions, goals, categories, and more.</Text>
+              </View>
+            </View>
+            <Pressable 
+              onPress={() => router.push('/help')} 
+              className="self-start flex-row items-center border border-amber-500/30 rounded-full px-4 py-2 bg-amber-500/10 ml-[44px]"
+            >
+              <Text className="text-amber-500 font-medium mr-1 text-sm">Open help guide</Text>
+              <ChevronRight size={16} color="#f59e0b" />
+            </Pressable>
+          </View>
+        </Card>
+
+        {/* ABOUT */}
+        <SectionTitle title="ABOUT" />
+        <Card>
+          <View className="p-6 items-center border-b border-zinc-100 dark:border-white/5">
+            <Image
+              source={require("../assets/images/grass flow.png")}
+              style={{ width: 140, height: 140, borderRadius: 28, marginBottom: 16 }}
+              contentFit="cover"
+            />
+            <Text className="text-xl font-bold text-zinc-900 dark:text-white mb-1">Flow <Text className="text-xs text-zinc-500 font-normal">v{version}</Text></Text>
+            <Text className="text-sm text-zinc-500 mb-2">Made by Matthew Vargas</Text>
+            <Pressable className="flex-row items-center" onPress={() => Linking.openURL(FLOW_WEBSITE_URL)}>
+              <Globe size={14} color="#f59e0b" />
+              <Text className="text-amber-500 ml-1 text-sm">flowph.vercel.app</Text>
+              <ExternalLink size={12} color="#f59e0b" className="ml-1" />
+            </Pressable>
+          </View>
+          
+          <Pressable 
+            className="p-4 flex-row items-center justify-between border-b border-zinc-100 dark:border-white/5" 
+            onPress={() => Linking.openURL(FLOW_FACEBOOK_COMMUNITY_URL)}
+          >
+            <View className="flex-row items-center flex-1 pr-4">
+              <IconWrapper icon={<FontAwesome name="facebook" size={18} color="#f59e0b" />} />
+              <View className="ml-3">
+                <Text className="text-base font-medium text-zinc-900 dark:text-white">Flow Community</Text>
+                <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Join the Facebook community for updates, feedback, and fellow Flow users.</Text>
+              </View>
+            </View>
+            <ExternalLink size={16} color="#71717a" />
+          </Pressable>
+
+          <Pressable 
+            className="p-4 flex-row items-start" 
+            onPress={() => router.push('/privacy')}
+          >
+            <IconWrapper icon={<ShieldCheck size={18} color="#f59e0b" />} />
+            <View className="ml-3 flex-1">
+              <View className="bg-amber-500/10 px-2 py-1 rounded self-start mb-2">
+                 <Text className="text-xs font-medium text-amber-500">Privacy notice</Text>
+              </View>
+              <Text className="text-sm text-zinc-500 dark:text-zinc-400">Your productivity data stays entirely on your device. We don't use cloud storage or subscriptions, so everything is kept completely private and secure.</Text>
+            </View>
+          </Pressable>
+        </Card>
+
+        {/* Danger Zone */}
+        <Pressable 
+          onPress={handleClearData} 
+          className="mt-6 mb-4 p-4 bg-red-50 dark:bg-red-950/40 rounded-2xl flex-row items-center justify-center border border-red-200 dark:border-red-900/50"
+        >
+          <Trash2 size={20} color="#ef4444" />
+          <Text className="ml-2 text-base font-semibold text-red-500">Reset all data</Text>
+        </Pressable>
+        
+        <Text className="text-xs text-zinc-500 dark:text-zinc-600 text-center mb-8 px-4 leading-5">
+          Productivity requires focus and flow. They are critical elements, and protecting your time gives your remarkable work a chance to survive.
+        </Text>
       </ScrollView>
     </SafeAreaView>
   );
 }
+

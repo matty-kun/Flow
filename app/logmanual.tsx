@@ -537,10 +537,10 @@ export default function EntryModal() {
               headerRight={
                 <Pressable
                   onPress={() => setShowNewCat(true)}
-                  className="flex-row items-center gap-1 px-2 py-1 rounded-full bg-gray-100 dark:bg-zinc-800"
+                  className="flex-row items-center gap-1 bg-amber-50 dark:bg-amber-500/10 px-3 py-1.5 rounded-full"
                 >
-                  <Plus size={10} color="#9ca3af" />
-                  <Text className="text-[10px] font-black text-gray-400 uppercase">New</Text>
+                  <Plus size={11} color="#FBBF24" strokeWidth={3} />
+                  <Text className="text-[10px] font-black text-amber-400 uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >

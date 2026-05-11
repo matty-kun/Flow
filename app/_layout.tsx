@@ -13,6 +13,7 @@ import { useColorScheme } from "nativewind";
 import { useEffect, useRef } from "react";
 import { LogBox } from "react-native";
 import "react-native-reanimated";
+import { SafeAreaProvider } from "react-native-safe-area-context";
 import "../global.css";
 
 async function migrateDbIfNeeded(db: SQLiteDatabase) {
@@ -46,23 +47,35 @@ async function migrateDbIfNeeded(db: SQLiteDatabase) {
   } catch (error) {}
 }
 
+import ShakeUndoListener from "@/components/app/ShakeUndoListener";
 import FloatingTimer from "@/components/log/FloatingTimer";
 import { LanguageProvider } from "@/context/LanguageContext";
-import { SummaryVisibleProvider } from "@/context/SummaryVisibleContext";
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { loadHapticsPreference } from "@/utils/haptics";
 import { OnboardingProvider, useOnboarding } from "@/context/OnboardingContext";
+import { SummaryVisibleProvider } from "@/context/SummaryVisibleContext";
 import { TrackingProvider, useTracking } from "@/context/TrackingContext";
+import { loadHapticsPreference } from "@/utils/haptics";
+import {
+    setupTimerNotificationCategory,
+    showTimerOngoingNotificationPaused,
+    showTimerOngoingNotificationResumed,
+    TIMER_NEXT_ROUND_ACTION,
+    TIMER_PAUSE_ACTION,
+    TIMER_RESUME_ACTION,
+    TIMER_STOP_ACTION,
+} from "@/utils/notifications";
+import { loadShakeUndoPreference } from "@/utils/shakeUndoPrefs";
 import { loadTimerState } from "@/utils/timerState";
-import { setupTimerNotificationCategory, showTimerOngoingNotificationPaused, showTimerOngoingNotificationResumed, TIMER_STOP_ACTION, TIMER_PAUSE_ACTION, TIMER_RESUME_ACTION, TIMER_NEXT_ROUND_ACTION } from "@/utils/notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
 import { AppState, Platform } from "react-native";
 
 // Register notifee background event handler (Android only).
 // This runs when the app is killed or in background and the user taps a notification action.
 if (Platform.OS === "android") {
   try {
-    const notifee = require("@notifee/react-native").default as typeof import("@notifee/react-native").default;
-    const { EventType } = require("@notifee/react-native") as typeof import("@notifee/react-native");
+    const notifee = require("@notifee/react-native")
+      .default as typeof import("@notifee/react-native").default;
+    const { EventType } =
+      require("@notifee/react-native") as typeof import("@notifee/react-native");
     notifee.onBackgroundEvent(async ({ type, detail }) => {
       if (type === EventType.PRESS) {
         // Plain tap on notification — navigate to tracker when app foregrounds
@@ -77,7 +90,10 @@ if (Platform.OS === "android") {
       } else if (actionId === TIMER_RESUME_ACTION) {
         await AsyncStorage.setItem("pending_notif_action", actionId);
         await showTimerOngoingNotificationResumed();
-      } else if (actionId === TIMER_STOP_ACTION || actionId === TIMER_NEXT_ROUND_ACTION) {
+      } else if (
+        actionId === TIMER_STOP_ACTION ||
+        actionId === TIMER_NEXT_ROUND_ACTION
+      ) {
         await AsyncStorage.setItem("pending_notif_action", actionId);
       }
     });
@@ -115,6 +131,7 @@ export default function RootLayout() {
     if (loaded) {
       SplashScreen.hideAsync();
       loadHapticsPreference();
+      void loadShakeUndoPreference();
       setupTimerNotificationCategory();
     }
   }, [loaded]);
@@ -124,17 +141,19 @@ export default function RootLayout() {
   }
 
   return (
-    <SQLiteProvider databaseName="klowk.db" onInit={migrateDbIfNeeded}>
-      <LanguageProvider>
-        <TrackingProvider>
-          <OnboardingProvider>
-            <SummaryVisibleProvider>
-              <RootLayoutNav />
-            </SummaryVisibleProvider>
-          </OnboardingProvider>
-        </TrackingProvider>
-      </LanguageProvider>
-    </SQLiteProvider>
+    <SafeAreaProvider>
+      <SQLiteProvider databaseName="klowk.db" onInit={migrateDbIfNeeded}>
+        <LanguageProvider>
+          <TrackingProvider>
+            <OnboardingProvider>
+              <SummaryVisibleProvider>
+                <RootLayoutNav />
+              </SummaryVisibleProvider>
+            </OnboardingProvider>
+          </TrackingProvider>
+        </LanguageProvider>
+      </SQLiteProvider>
+    </SafeAreaProvider>
   );
 }
 
@@ -182,7 +201,10 @@ function RootLayoutNav() {
       const p = state.params;
       const query = Object.entries(p)
         .filter(([, v]) => v !== undefined)
-        .map(([k, v]) => `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`)
+        .map(
+          ([k, v]) =>
+            `${encodeURIComponent(k)}=${encodeURIComponent(v as string)}`,
+        )
         .join("&");
       router.replace(`/tracker?${query}` as any);
     });
@@ -215,9 +237,6 @@ function RootLayoutNav() {
           headerShown: false,
           animation: "slide_from_right",
           contentStyle: { backgroundColor: bg },
-          cardStyle: { backgroundColor: bg },
-          cardOverlayEnabled: false,
-          cardShadowEnabled: false,
         }}
       >
         <Stack.Screen
@@ -267,6 +286,18 @@ function RootLayoutNav() {
           options={{ contentStyle: { backgroundColor: bg } }}
         />
         <Stack.Screen
+          name="help"
+          options={{ contentStyle: { backgroundColor: bg } }}
+        />
+        <Stack.Screen
+          name="about"
+          options={{ contentStyle: { backgroundColor: bg } }}
+        />
+        <Stack.Screen
+          name="privacy"
+          options={{ contentStyle: { backgroundColor: bg } }}
+        />
+        <Stack.Screen
           name="history"
           options={{ contentStyle: { backgroundColor: bg } }}
         />
@@ -274,8 +305,21 @@ function RootLayoutNav() {
           name="categories"
           options={{ contentStyle: { backgroundColor: bg } }}
         />
+        <Stack.Screen
+          name="camera-picker"
+          options={{
+            presentation: "fullScreenModal",
+            animation: "slide_from_bottom",
+            contentStyle: { backgroundColor: "#000" },
+          }}
+        />
+        <Stack.Screen
+          name="share-session"
+          options={{ contentStyle: { backgroundColor: bg } }}
+        />
       </Stack>
       {isOnboarded && <FloatingTimer />}
+      {isOnboarded && <ShakeUndoListener />}
     </ThemeProvider>
   );
 }

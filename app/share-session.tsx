@@ -3,12 +3,13 @@ import { Category } from "@/context/TrackingContext";
 import { impact } from "@/utils/haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as MediaLibrary from "expo-media-library";
-import { router, useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams, useFocusEffect } from "expo-router";
+import { consumePendingPhoto } from "@/utils/cameraBridge";
 import * as Sharing from "expo-sharing";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { ArrowLeft, Camera, Download, ImagePlus, Share2, X } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import React, { useRef, useState } from "react";
+import React, { useCallback, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
@@ -35,12 +36,22 @@ export default function ShareSessionScreen() {
     ? JSON.parse(params.category)
     : undefined;
 
+  // Pick up photo from in-app camera when screen regains focus
+  useFocusEffect(
+    useCallback(() => {
+      const uri = consumePendingPhoto();
+      if (uri) setPhotoUri(uri);
+    }, [])
+  );
+
   const [photoUri, setPhotoUri] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [sharedToast, setSharedToast] = useState(false);
   const toastAnim = useRef(new Animated.Value(0)).current;
+  const sharedToastAnim = useRef(new Animated.Value(0)).current;
   const viewShotRef = useRef<ViewShot>(null);
 
   const showSavedToast = () => {
@@ -50,6 +61,15 @@ export default function ShareSessionScreen() {
       Animated.delay(1600),
       Animated.timing(toastAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
     ]).start(() => setSavedToast(false));
+  };
+
+  const showSharedToast = () => {
+    setSharedToast(true);
+    Animated.sequence([
+      Animated.timing(sharedToastAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+      Animated.delay(1600),
+      Animated.timing(sharedToastAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+    ]).start(() => setSharedToast(false));
   };
 
   const captureCard = (): Promise<string> =>
@@ -71,12 +91,9 @@ export default function ShareSessionScreen() {
     if (!result.canceled) setPhotoUri(result.assets[0].uri);
   };
 
-  const takePhoto = async () => {
+  const takePhoto = () => {
     impact(ImpactFeedbackStyle.Light);
-    const perm = await ImagePicker.requestCameraPermissionsAsync();
-    if (perm.status !== "granted") return;
-    const result = await ImagePicker.launchCameraAsync({ quality: 0.9 });
-    if (!result.canceled) setPhotoUri(result.assets[0].uri);
+    router.push("/camera-picker");
   };
 
   const handleSave = async () => {
@@ -110,7 +127,10 @@ export default function ShareSessionScreen() {
     try {
       const uri = await captureCard();
       const canShare = await Sharing.isAvailableAsync();
-      if (canShare) await Sharing.shareAsync(uri, { mimeType: "image/png" });
+      if (canShare) {
+        await Sharing.shareAsync(uri, { mimeType: "image/png" });
+        showSharedToast();
+      }
     } catch (e) {
       console.warn("Share failed", e);
     } finally {
@@ -333,6 +353,26 @@ export default function ShareSessionScreen() {
         >
           <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
             Image saved
+          </Text>
+        </Animated.View>
+      )}
+
+      {sharedToast && (
+        <Animated.View
+          pointerEvents="none"
+          style={{
+            position: "absolute",
+            bottom: 200,
+            alignSelf: "center",
+            opacity: sharedToastAnim,
+            backgroundColor: "#121212",
+            paddingHorizontal: 20,
+            paddingVertical: 10,
+            borderRadius: 24,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "700", fontSize: 13 }}>
+            Shared successfully!
           </Text>
         </Animated.View>
       )}
