@@ -13,7 +13,7 @@ export interface WidgetData {
   accentColor: string;
 }
 
-const nameToWidget: Record<string, React.ComponentType<WidgetData>> = {
+const nameToWidget: Record<string, any> = {
   FocusWidget,
   StreakWidget,
 };

@@ -127,7 +127,6 @@ export default React.memo(function TabOneScreen() {
     () => streakMode === "off" ? 0 : computeStreak(activities),
     [activities, streakMode],
   );
-
   const { width, height } = Dimensions.get("window");
   const pagerRef = useRef<ScrollView>(null);
 

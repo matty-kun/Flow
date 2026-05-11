@@ -526,11 +526,9 @@ export default function TrackerPage() {
   }));
 
   // ── Derived display values ─────────────────────────────────────────────────
-
   const { colorScheme } = useColorScheme();
   const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
-
   const targetSecs = currentActivity
     ? (activity?.target_duration || 0)
     : isCycling.current ? pendingTargetSecs.current : (activity?.target_duration || pInitialTargetSecs || 0);

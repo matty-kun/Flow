@@ -39,7 +39,7 @@ export function StreakWidget({ streak, weekDays, accentColor }: Props) {
             width: 22,
             height: 22,
             borderRadius: 6,
-            backgroundColor: activeColor,
+            backgroundColor: activeColor as any,
             justifyContent: "center",
             alignItems: "center",
           }}
@@ -130,7 +130,7 @@ export function StreakWidget({ streak, weekDays, accentColor }: Props) {
                   width: 22,
                   height: 22,
                   borderRadius: 11,
-                  backgroundColor: weekDays[i] ? activeColor : "#ffffff1F",
+                  backgroundColor: (weekDays[i] ? activeColor : "#ffffff1F") as any,
                   justifyContent: "center",
                   alignItems: "center",
                 }}
@@ -149,7 +149,7 @@ export function StreakWidget({ streak, weekDays, accentColor }: Props) {
                 style={{
                   fontSize: 8,
                   fontWeight: "700",
-                  color: weekDays[i] ? activeColor : "#ffffff4D",
+                  color: (weekDays[i] ? activeColor : "#ffffff4D") as any,
                   marginTop: 4,
                 }}
               />

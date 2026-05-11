@@ -58,7 +58,7 @@ const IconWrapper = ({ icon, accentColor }: { icon: React.ReactNode, accentColor
   const bgColor = getContrastingColor(accentColor, isDark);
   return (
     <View style={{ backgroundColor: bgColor + "1A" }} className="w-8 h-8 rounded-full items-center justify-center mt-0.5">
-      {React.cloneElement(icon as React.ReactElement, { color: bgColor })}
+      {React.cloneElement(icon as any, { color: bgColor })}
     </View>
   );
 };
@@ -80,7 +80,7 @@ const SegmentedButton = ({ label, selected, onPress, icon, accentColor }: any) =
     >
       {icon && (
         <View className="mr-2">
-          {React.cloneElement(icon as React.ReactElement, { 
+          {React.cloneElement(icon as any, { 
             color: selected 
               ? getContrastingColor(accentColor, isDark) 
               : (isDark ? "#71717a" : "#94a3b8") 
@@ -144,7 +144,7 @@ export default function SettingsScreen() {
     ]);
   };
 
-  const version = Constants.expoConfig?.version || "1.3.0";
+  const version = Constants.expoConfig?.version || "1.4.0";
 
   return (
     <SafeAreaView className="flex-1 bg-zinc-50 dark:bg-[#0A0A0A]" edges={["top"]}>
