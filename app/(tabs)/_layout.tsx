@@ -43,24 +43,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const sheetAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    if (isTimerRunning) {
-      const pulse = Animated.loop(
-        Animated.sequence([
-          Animated.timing(pulseAnim, {
-            toValue: 1.08,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-          Animated.timing(pulseAnim, {
-            toValue: 1,
-            duration: 800,
-            useNativeDriver: true,
-          }),
-        ]),
-      );
-      pulse.start();
-      return () => pulse.stop();
-    }
+    // Pulse animation removed per user request
+    pulseAnim.setValue(1);
   }, [isTimerRunning]);
 
   useEffect(() => {

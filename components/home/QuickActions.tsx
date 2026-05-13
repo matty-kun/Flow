@@ -1,4 +1,5 @@
 import { useLanguage } from "@/context/LanguageContext";
+import { useTracking } from "@/context/TrackingContext";
 import { impact } from "@/utils/haptics";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { router } from "expo-router";
@@ -12,6 +13,7 @@ import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 
 export default function QuickActions() {
   const { t } = useLanguage();
+  const { currentActivity } = useTracking();
   const { colorScheme } = useColorScheme();
   const { accentColor } = useAppTheme();
   const navigation = useNavigation<any>();
@@ -28,15 +30,19 @@ export default function QuickActions() {
       style={{ paddingHorizontal: 24, paddingTop: 4, paddingBottom: 16 }}
     >
       <Pressable
-        onPress={() => { impact(ImpactFeedbackStyle.Medium); router.push("/live"); }}
+        onPress={() => { impact(ImpactFeedbackStyle.Medium); router.push("/tracker"); }}
         style={{ flexDirection: "row", alignItems: "center", backgroundColor: displayColor, borderRadius: 28, padding: 20, marginBottom: 12, shadowColor: displayColor, shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.3, shadowRadius: 16, elevation: 8 }}
       >
         <View style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: "rgba(255,255,255,0.2)", alignItems: "center", justifyContent: "center", marginRight: 16 }}>
           <Timer size={22} color={foregroundColor} />
         </View>
         <View style={{ flex: 1 }}>
-          <Text style={{ fontSize: 16, fontWeight: "900", color: foregroundColor }}>{t("start_live_session")}</Text>
-          <Text style={{ fontSize: 11, color: (accentColor === "#18181b" && isDark) ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.7)", marginTop: 2 }}>Track your focus in real time</Text>
+          <Text style={{ fontSize: 16, fontWeight: "900", color: foregroundColor }}>
+            {currentActivity ? t("live_session") : t("start_live_session")}
+          </Text>
+          <Text style={{ fontSize: 11, color: (accentColor === "#18181b" && isDark) ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.7)", marginTop: 2 }}>
+            {currentActivity ? "Return to your active session" : "Track your focus in real time"}
+          </Text>
         </View>
         <ChevronRight size={20} color={(accentColor === "#18181b" && isDark) ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.6)"} />
       </Pressable>

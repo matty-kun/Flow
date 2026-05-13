@@ -577,9 +577,6 @@ export default function TrackerPage() {
             <Settings size={22} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
           </Pressable>
         )}
-        <Pressable onPressIn={handleMinimize} style={styles.headerBtn}>
-          <Minimize2 size={24} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
-        </Pressable>
       </View>
 
       <TimerSettingsModal

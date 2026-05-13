@@ -1,9 +1,9 @@
 import { CategoryIcon } from "@/components/category/CategoryIcon";
-import { Activity, Category } from "@/context/TrackingContext";
-import { formatDuration } from "@/utils/time";
-import { mergePomoActivities } from "@/utils/pomodoroMerge";
-import React, { useMemo, useState } from "react";
 import { useAppTheme } from "@/context/ThemeContext";
+import { Activity, Category } from "@/context/TrackingContext";
+import { mergePomoActivities } from "@/utils/pomodoroMerge";
+import { formatLogDuration } from "@/utils/time";
+import React, { useMemo, useState } from "react";
 import { Image, Pressable, ScrollView, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -62,14 +62,14 @@ function getPeriodRange(period: Period): { start: Date; end: Date; dateLabel: st
   return { start, end, dateLabel: String(now.getFullYear()) };
 }
 
-function getHeadline(period: Period, totalMins: number): { main: string; sub: string } {
-  if (totalMins === 0) {
+function getHeadline(period: Period, totalSecs: number): { main: string; sub: string } {
+  if (totalSecs === 0) {
     return {
       main: `No sessions.`,
       sub: "A fresh slate. Start tracking!",
     };
   }
-  const formatted = formatDuration(totalMins);
+  const formatted = formatLogDuration(0, null, totalSecs);
   return {
     main: `${formatted} tracked.`,
     sub: period === "today" ? "Keep the momentum going." : "Nice work — keep it up.",
@@ -97,10 +97,12 @@ export default function SummaryPage({ activities, categories, width }: Props) {
     [activities, start, end],
   );
 
-  const totalMins = useMemo(
-    () => Math.round(filtered.reduce((sum, a) => sum + (a.duration || 0), 0) / 60),
+  const totalSecs = useMemo(
+    () => filtered.reduce((sum, a) => sum + (a.duration || 0), 0),
     [filtered],
   );
+
+  const totalMins = Math.round(totalSecs / 60);
 
   const recentSessions = useMemo(() => mergePomoActivities(filtered), [filtered]);
 
@@ -116,50 +118,46 @@ export default function SummaryPage({ activities, categories, width }: Props) {
     return filtered.reduce((best, a) => (a.duration || 0) > (best.duration || 0) ? a : best);
   }, [filtered]);
 
-  const { main: headlineMain, sub: headlineSub } = getHeadline(period, totalMins);
+  const { main: headlineMain, sub: headlineSub } = getHeadline(period, totalSecs);
 
   return (
     <SafeAreaView style={{ flex: 1, width, backgroundColor: accentColor }} edges={["top", "bottom"]}>
-      <ScrollView
-        showsVerticalScrollIndicator={false}
-        style={{ flex: 1, backgroundColor: accentColor }}
-        contentContainerStyle={{ flexGrow: 1 }}
-      >
+      <View style={{ flex: 1 }}>
         {/* Date top-left */}
         <Text style={{ fontSize: 12, fontWeight: "800", color: TEXT, letterSpacing: 1.2, paddingHorizontal: 24, paddingTop: 16 }}>
           {dateLabel}
         </Text>
 
         {/* Mascot right, lower */}
-        <View style={{ alignItems: "flex-end", paddingHorizontal: 24, marginTop: 12 }}>
+        <View style={{ alignItems: "flex-end", paddingHorizontal: 24, marginTop: 4 }}>
           <Image
             source={require("@/assets/images/flow portrait.png")}
-            style={{ width: 90, height: 90, borderRadius: 45, overflow: "hidden" }}
+            style={{ width: 70, height: 70, borderRadius: 35, overflow: "hidden" }}
             resizeMode="contain"
           />
         </View>
 
         {/* Headline */}
-        <View style={{ paddingHorizontal: 24, paddingTop: 20, paddingBottom: 32 }}>
-          <Text style={{ fontSize: 40, fontWeight: "900", color: TEXT, lineHeight: 46 }}>
+        <View style={{ paddingHorizontal: 24, paddingTop: 12, paddingBottom: 20 }}>
+          <Text style={{ fontSize: 36, fontWeight: "900", color: TEXT, lineHeight: 42 }}>
             {headlineMain}
           </Text>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: TEXT_SUB, marginTop: 10 }}>
+          <Text style={{ fontSize: 13, fontWeight: "600", color: TEXT_SUB, marginTop: 6 }}>
             {headlineSub}
           </Text>
         </View>
 
         {/* Sessions section */}
-        <View style={{ paddingHorizontal: 24 }}>
-          <Text style={{ fontSize: 15, fontWeight: "700", color: TEXT, marginBottom: 12 }}>
+        <View style={{ paddingHorizontal: 24, flex: 1 }}>
+          <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT, marginBottom: 8 }}>
             Sessions
           </Text>
 
           {recentSessions.length === 0 ? (
-            <Text style={{ fontSize: 15, color: TEXT_SUB, fontWeight: "500" }}>Nothing logged here.</Text>
+            <Text style={{ fontSize: 14, color: TEXT_SUB, fontWeight: "500" }}>Nothing logged here.</Text>
           ) : (
             <ScrollView
-              style={{ maxHeight: 260 }}
+              style={{ flex: 1 }}
               nestedScrollEnabled={true}
               showsVerticalScrollIndicator={false}
             >
@@ -167,20 +165,20 @@ export default function SummaryPage({ activities, categories, width }: Props) {
                 const cat = categories.find((c) => c.id === log.category);
                 return (
                   <View key={i}>
-                    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 11 }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", paddingVertical: 10 }}>
                       <View style={{
-                        width: 34, height: 34, borderRadius: 10,
+                        width: 32, height: 32, borderRadius: 10,
                         backgroundColor: "rgba(18,18,18,0.1)",
                         alignItems: "center", justifyContent: "center", marginRight: 12,
                       }}>
-                        {cat && <CategoryIcon name={cat.iconName} size={15} color={TEXT} />}
+                        {cat && <CategoryIcon name={cat.iconName} size={14} color={TEXT} />}
                       </View>
                       <View style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 14, fontWeight: "700", color: TEXT }} numberOfLines={1}>{log.title}</Text>
-                        {cat && <Text style={{ fontSize: 12, color: TEXT_SUB, marginTop: 1 }}>{cat.label}</Text>}
+                        <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT }} numberOfLines={1}>{log.title}</Text>
+                        {cat && <Text style={{ fontSize: 11, color: TEXT_SUB, marginTop: 1 }}>{cat.label}</Text>}
                       </View>
-                      <Text style={{ fontSize: 13, fontWeight: "700", color: TEXT_SUB }}>
-                        {formatDuration(Math.round((log.duration || 0) / 60))}
+                      <Text style={{ fontSize: 12, fontWeight: "700", color: TEXT_SUB }}>
+                        {formatLogDuration(0, null, log.duration || 0)}
                       </Text>
                     </View>
                     {i < recentSessions.length - 1 && (
@@ -193,27 +191,24 @@ export default function SummaryPage({ activities, categories, width }: Props) {
           )}
         </View>
 
-        {/* Spacer */}
-        <View style={{ flex: 1, minHeight: 32 }} />
-
-        {/* Divider */}
-        <View style={{ height: 1, backgroundColor: DIVIDER, marginHorizontal: 24, marginBottom: 20 }} />
-
         {/* Stats row */}
-        <View style={{ flexDirection: "row", paddingHorizontal: 24, marginBottom: 20 }}>
+        <View style={{ flexDirection: "row", paddingHorizontal: 24, marginTop: 20, marginBottom: 16 }}>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>Total</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: TEXT }}>{totalMins > 0 ? formatDuration(totalMins) : "—"}</Text>
+            <Text style={{ fontSize: 9, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 2 }}>Total</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: TEXT }}>{totalSecs > 0 ? formatLogDuration(0, null, totalSecs) : "—"}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>Top</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: TEXT }} numberOfLines={1}>{topCategory ? topCategory.label : "—"}</Text>
+            <Text style={{ fontSize: 9, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 2 }}>Top</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: TEXT }} numberOfLines={1}>{topCategory ? topCategory.label : "—"}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={{ fontSize: 10, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.5, textTransform: "uppercase", marginBottom: 4 }}>Longest</Text>
-            <Text style={{ fontSize: 22, fontWeight: "900", color: TEXT }} numberOfLines={1}>{longestSession ? formatDuration(Math.round((longestSession.duration || 0) / 60)) : "—"}</Text>
+            <Text style={{ fontSize: 9, fontWeight: "900", color: TEXT_SUB, letterSpacing: 1.2, textTransform: "uppercase", marginBottom: 2 }}>Longest</Text>
+            <Text style={{ fontSize: 18, fontWeight: "900", color: TEXT }} numberOfLines={1}>{longestSession ? formatLogDuration(0, null, longestSession.duration || 0) : "—"}</Text>
           </View>
         </View>
+
+        {/* Divider */}
+        <View style={{ height: 1, backgroundColor: DIVIDER, marginHorizontal: 24, marginBottom: 16 }} />
 
         {/* Period toggle — single row */}
         <View style={{ flexDirection: "row", marginHorizontal: 24, gap: 8, marginBottom: 24 }}>
@@ -237,17 +232,17 @@ export default function SummaryPage({ activities, categories, width }: Props) {
         </View>
 
         {/* Branding footer */}
-        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 8 }}>
+        <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
           <Image
             source={require("@/assets/images/silhouette.png")}
-            style={{ width: 30, height: 30, borderRadius: 15 }}
+            style={{ width: 26, height: 26, borderRadius: 13 }}
           />
           <View>
-            <Text style={{ fontSize: 13, fontWeight: "900", color: TEXT }}>flow</Text>
-            <Text style={{ fontSize: 11, fontWeight: "600", color: TEXT_SUB }}>Made by Matthew Vargas</Text>
+            <Text style={{ fontSize: 12, fontWeight: "900", color: TEXT }}>flow</Text>
+            <Text style={{ fontSize: 10, fontWeight: "600", color: TEXT_SUB }}>Made by Matthew Vargas</Text>
           </View>
         </View>
-      </ScrollView>
+      </View>
     </SafeAreaView>
   );
 }

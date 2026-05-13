@@ -74,13 +74,17 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
           const hrs = Math.floor(stat.totalMins / 3600);
           const mins = Math.floor((stat.totalMins % 3600) / 60);
           const timeStr = hrs > 0 ? `${hrs}h ${mins > 0 ? mins + "m" : ""}`.trim() : `${mins}m`;
+          const capitalize = (s: string) => s ? s.charAt(0).toUpperCase() + s.slice(1) : "";
+          const displayLabel = t(stat.id as any);
+          const finalLabel = (displayLabel && displayLabel !== stat.id) ? displayLabel : stat.label;
+
           return (
             <View key={stat.id} style={{ flexDirection: "row", alignItems: "center", paddingVertical: 7, borderTopWidth: i === 0 ? 0 : 1, borderTopColor: isDark ? displayColor + "20" : displayColor + "30" }}>
               <View style={{ width: 22, height: 22, borderRadius: 7, backgroundColor: `${stat.color}22`, alignItems: "center", justifyContent: "center", marginRight: 8 }}>
                 <CategoryIcon name={stat.iconName} size={11} color={stat.color} customImageUri={stat.customImageUri} />
               </View>
               <Text style={{ flex: 1, fontSize: 11, fontWeight: "700", color: isDark ? "#d4d4d8" : "#374151" }} numberOfLines={1}>
-                {t(stat.id as any) || (stat.label.charAt(0).toUpperCase() + stat.label.slice(1))}
+                {capitalize(finalLabel)}
               </Text>
               <Text style={{ fontSize: 10, fontWeight: "800", color: isDark ? "#fff" : "#1a1a1a" }}>{timeStr}</Text>
             </View>

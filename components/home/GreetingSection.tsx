@@ -1,23 +1,24 @@
 import { useLanguage } from "@/context/LanguageContext";
 import { useOnboarding } from "@/context/OnboardingContext";
+import { useAppTheme } from "@/context/ThemeContext";
+import { useTracking } from "@/context/TrackingContext";
 import { formatDuration } from "@/utils/time";
 import { useColorScheme } from "nativewind";
 import React from "react";
-import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
 import { Image, Text, View } from "react-native";
 
 const FORECAST_MESSAGES: Record<string, Record<string, string>> = {
   on_track: {
-    en: "Slow and steady wins the race! We're right on trail — keep leaving that silver streak!",
-    tl: "Dahan-dahan pero sigurado! On track tayo — keep leaving that silver streak!",
+    en: "Slow and steady wins the race! We're right on trail, keep leaving that silver streak!",
+    tl: "Dahan-dahan pero sigurado! On track tayo, keep leaving that silver streak!",
   },
   behind: {
     en: "The path is getting long. Even a snail gets there with consistent steps. Try one more focused hour.",
-    tl: "Medyo nahuhuli na tayo. Kahit mabagal, consistent lang — try one more focused hour.",
+    tl: "Medyo nahuhuli na tayo. Kahit mabagal, consistent lang, try one more focused hour.",
   },
   burnout: {
-    en: "Even snails tuck in sometimes. You've been crawling hard — pull back and rest a bit.",
-    tl: "Kahit ang pinaka-sipag ay nagpapahinga. Nagtatrabaho ka nang husto — magpahinga muna.",
+    en: "Even snails tuck in sometimes. You've been crawling hard, pull back and rest a bit.",
+    tl: "Kahit ang pinaka-sipag ay nagpapahinga. Nagtatrabaho ka nang husto, magpahinga muna.",
   },
   at_risk: {
     en: "Good pace, but the finish line is still far. One small push keeps us on the trail.",
@@ -32,7 +33,7 @@ const FLOW_SAYINGS = {
       "That's {time} of pure focus today. Keep the momentum going!",
       "{time} locked in today. You're building something great.",
       "Crushed {time} of deep work today. Flow state achieved.",
-      "{time} of focus today — that's how legends are made.",
+      "{time} of focus today, that's how legends are made.",
       "You showed up for {time} today. Consistency is everything.",
     ],
     tl: [
@@ -57,7 +58,7 @@ const FLOW_SAYINGS = {
       "Ready na for a deep focus session? Nandito ako to help you track your wins.",
       "One session away na ang iyong next breakthrough. Tara na.",
       "Every great work day starts with the first focus block. Ready ka na?",
-      "The best time to focus was yesterday. The second best — right now.",
+      "The best time to focus was yesterday. The second best is right now.",
       "I-silence ang lahat. Lock in. Mag-build tayo ngayon.",
       "Your goals are waiting. One focused session can change everything.",
     ],
@@ -78,7 +79,7 @@ function FlowCharacter() {
     <View className="relative items-center justify-center">
       <View
         className="absolute rounded-full"
-        style={{
+        style={{ 
           width: 110,
           height: 26,
           bottom: -10,
@@ -107,9 +108,11 @@ export default function GreetingSection({
 }: Props) {
   const { t, language } = useLanguage();
   const { userName } = useOnboarding();
-  const { colorScheme } = useColorScheme();
   const { accentColor } = useAppTheme();
+  const { currentActivity } = useTracking();
+  const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
+
   const bubbleText =
     klowkForecastStatus === "no_goal"
       ? (() => {
@@ -138,13 +141,13 @@ export default function GreetingSection({
       </View>
       <Text className="text-[26px] font-black text-klowk-black dark:text-white mb-10">
         {t(greetingKey as any)}{" "}
-        <Text style={{ color: getContrastingColor(accentColor, isDark) }}>{userName || "User"}!</Text>
+        <Text style={{ color: accentColor }}>{userName || "User"}!</Text>
       </Text>
 
       <View className="relative items-center justify-center -mt-12">
         <View
           className="absolute -left-6 -right-6 h-[56px]"
-          style={{ top: "52%", backgroundColor: getContrastingColor(accentColor, isDark) }}
+          style={{ top: "52%", backgroundColor: accentColor }}
         />
         <View className="flex-row items-center justify-between mt-9">
           <View className="w-40 h-40 items-center justify-center -mt-14">

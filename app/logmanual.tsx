@@ -446,10 +446,10 @@ export default function EntryModal() {
                 <Pressable
                   onPress={() => setShowAddGoal(true)}
                   className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "1A" : "15") }}
+                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "33" : "20"), borderWidth: 1, borderColor: accentColor + "4D" }}
                 >
-                  <Plus size={11} color={accentColor} strokeWidth={3} />
-                  <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
+                  <Plus size={12} color={accentColor} strokeWidth={3} />
+                  <Text style={{ color: accentColor }} className="text-[11px] font-black uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >
@@ -543,10 +543,10 @@ export default function EntryModal() {
                 <Pressable
                   onPress={() => setShowNewCat(true)}
                   className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "1A" : "15") }}
+                  style={{ backgroundColor: accentColor + (colorScheme === "dark" ? "33" : "20"), borderWidth: 1, borderColor: accentColor + "4D" }}
                 >
-                  <Plus size={11} color={accentColor} strokeWidth={3} />
-                  <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
+                  <Plus size={12} color={accentColor} strokeWidth={3} />
+                  <Text style={{ color: accentColor }} className="text-[11px] font-black uppercase tracking-wide">New</Text>
                 </Pressable>
               }
             >

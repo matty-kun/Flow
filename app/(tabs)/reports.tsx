@@ -310,17 +310,6 @@ const TrendLineChart = ({
                   strokeLinecap="round"
                   strokeLinejoin="round"
                 />
-                {points.map((p, i) => (
-                  <Circle
-                    key={i}
-                    cx={p.x}
-                    cy={p.y}
-                    r={count <= 31 ? "4" : "2"}
-                    fill={i === activeIndex ? accentColor : colorScheme === "dark" ? "#18181b" : "white"}
-                    stroke={accentColor}
-                    strokeWidth="2"
-                  />
-                ))}
               </Svg>
             </View>
           </View>

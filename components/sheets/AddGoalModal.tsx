@@ -118,20 +118,26 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
       <View style={{ flex: 1 }}>
-        <Animated.View style={{ flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.6)", opacity: sheetBackdrop }}>
-          <Pressable style={{ flex: 1 }} onPress={() => { Keyboard.dismiss(); onClose(); }} />
-          <Animated.View>
-            <Animated.View style={{ transform: [{ translateY: sheetSlide }] }}>
-              <Pressable
-                onPress={(e) => e.stopPropagation()}
-                style={{
-                  backgroundColor: isDark ? "#1C1C1E" : "#fff",
-                  borderTopLeftRadius: 40,
-                  borderTopRightRadius: 40,
-                  flex: 1,
-                  maxHeight: height * 0.9,
-                }}
-              >
+        <Animated.View style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, backgroundColor: "rgba(0,0,0,0.6)", opacity: sheetBackdrop }} />
+        <Pressable style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0 }} onPress={() => { Keyboard.dismiss(); onClose(); }} />
+        <Animated.View 
+          style={{ 
+            position: "absolute", 
+            left: 0, 
+            right: 0, 
+            bottom: 0, 
+            transform: [{ translateY: sheetSlide }] 
+          }}
+        >
+          <Pressable
+            onPress={(e) => e.stopPropagation()}
+            style={{
+              backgroundColor: isDark ? "#1C1C1E" : "#fff",
+              borderTopLeftRadius: 40,
+              borderTopRightRadius: 40,
+              maxHeight: height * 0.9,
+            }}
+          >
                 {/* Fixed header */}
                 <View style={{ paddingHorizontal: 32, paddingTop: 32, paddingBottom: 16 }}>
                   <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
@@ -295,9 +301,7 @@ export default function AddGoalModal({ visible, onClose }: Props) {
                     </Text>
                   </Pressable>
                 </View>
-              </Pressable>
-            </Animated.View>
-          </Animated.View>
+          </Pressable>
         </Animated.View>
       </View>
 

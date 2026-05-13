@@ -466,10 +466,10 @@ export default function LiveSessionPage() {
               <Pressable
                 onPress={() => setShowAddGoal(true)}
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "1A" : "15") }}
+                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "33" : "20"), borderWidth: 1, borderColor: getContrastingColor(accentColor, isDark) + "4D" }}
               >
-                <Plus size={11} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
-                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
+                <Plus size={12} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[11px] font-black uppercase tracking-wide">New</Text>
               </Pressable>
             </View>
 
@@ -565,10 +565,10 @@ export default function LiveSessionPage() {
               <Pressable
                 onPress={() => setShowNewCat(true)}
                 className="flex-row items-center gap-1 px-3 py-1.5 rounded-full"
-                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "1A" : "15") }}
+                style={{ backgroundColor: getContrastingColor(accentColor, isDark) + (colorScheme === "dark" ? "33" : "20"), borderWidth: 1, borderColor: getContrastingColor(accentColor, isDark) + "4D" }}
               >
-                <Plus size={11} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
-                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[10px] font-black uppercase tracking-wide">New</Text>
+                <Plus size={12} color={getContrastingColor(accentColor, isDark)} strokeWidth={3} />
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[11px] font-black uppercase tracking-wide">New</Text>
               </Pressable>
             </View>
             <CategoryCardPicker
@@ -579,6 +579,43 @@ export default function LiveSessionPage() {
             />
           </View>
         </ScrollView>
+
+        {/* Ongoing Session Banner */}
+        {currentActivity && (
+          <Pressable
+            onPress={() => {
+              impact(ImpactFeedbackStyle.Medium);
+              router.push("/tracker");
+            }}
+            style={{ backgroundColor: getContrastingColor(accentColor, isDark) + "1A", borderColor: getContrastingColor(accentColor, isDark) + "33" }}
+            className="mx-6 mb-4 p-4 rounded-[24px] border flex-row items-center justify-between"
+          >
+            <View className="flex-row items-center flex-1 mr-4">
+              <View 
+                style={{ backgroundColor: getContrastingColor(accentColor, isDark) }}
+                className="w-8 h-8 rounded-full items-center justify-center mr-3"
+              >
+                <Timer size={16} color={accentColor === "#18181b" && isDark ? "#121212" : "#fff"} />
+              </View>
+              <View className="flex-1">
+                <Text style={{ color: getContrastingColor(accentColor, isDark) }} className="text-[10px] font-black uppercase tracking-wider mb-0.5">
+                  Session in Progress
+                </Text>
+                <Text numberOfLines={1} className="text-sm font-bold text-klowk-black dark:text-white">
+                  {currentActivity.title || t("untitled_session")}
+                </Text>
+              </View>
+            </View>
+            <View 
+              style={{ backgroundColor: getContrastingColor(accentColor, isDark) }}
+              className="px-3 py-1.5 rounded-full"
+            >
+              <Text style={{ color: accentColor === "#18181b" && isDark ? "#121212" : "#fff" }} className="text-[10px] font-black uppercase">
+                Resume
+              </Text>
+            </View>
+          </Pressable>
+        )}
 
         {/* Start Button */}
         <View className="p-6 border-t border-gray-50 dark:border-zinc-900 bg-white dark:bg-klowk-black">

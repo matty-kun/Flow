@@ -5,15 +5,15 @@ import HomeHeader from "@/components/home/HomeHeader";
 import QuickActions from "@/components/home/QuickActions";
 import RecentLogs from "@/components/home/RecentLogs";
 import SummaryPage from "@/components/log/SummaryPage";
-import { Activity, Category, useTracking } from "@/context/TrackingContext";
-import { useSummaryVisible } from "@/context/SummaryVisibleContext";
-import { getForecast } from "@/utils/forecast";
-import { computeStreak } from "@/utils/streak";
 import { loadStreakMode, StreakMode } from "@/components/sheets/StreakModal";
+import { useSummaryVisible } from "@/context/SummaryVisibleContext";
+import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { getForecast } from "@/utils/forecast";
 import { mergePomoActivities } from "@/utils/pomodoroMerge";
+import { computeStreak } from "@/utils/streak";
 import { useColorScheme } from "nativewind";
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, ScrollView, View } from "react-native";
+import { Dimensions, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function TabOneScreen() {
@@ -138,11 +138,16 @@ export default React.memo(function TabOneScreen() {
       showsHorizontalScrollIndicator={false}
       bounces={false}
       style={{ flex: 1 }}
-      onLayout={() => pagerRef.current?.scrollTo({ x: width, y: 0, animated: false })}
+      contentOffset={{ x: width, y: 0 }}
+      onLayout={() => {
+        // Ensure we are at the right position on layout
+        pagerRef.current?.scrollTo({ x: width, y: 0, animated: false });
+      }}
       onMomentumScrollEnd={(e) => {
         const page = Math.round(e.nativeEvent.contentOffset.x / width);
         setIsSummaryVisible(page === 0);
       }}
+      scrollEventThrottle={16}
     >
       {/* Page 0 — Summary (swipe left to reveal) */}
       <SummaryPage activities={activities} categories={categories} width={width} />

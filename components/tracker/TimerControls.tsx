@@ -74,8 +74,8 @@ export default function TimerControls({
     <View style={styles.controls}>
       <Pressable onPress={onTogglePause} style={[styles.btn, { backgroundColor: ringColor }]}>
         {isPaused
-          ? <Play size={24} color="#121212" fill="#121212" />
-          : <Pause size={24} color="#121212" fill="#121212" />
+          ? <Play size={24} color={ringColor === "#18181b" && isDark ? "#fff" : "#121212"} fill={ringColor === "#18181b" && isDark ? "#fff" : "#121212"} />
+          : <Pause size={24} color={ringColor === "#18181b" && isDark ? "#fff" : "#121212"} fill={ringColor === "#18181b" && isDark ? "#fff" : "#121212"} />
         }
       </Pressable>
       <Pressable
