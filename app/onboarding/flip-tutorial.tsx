@@ -120,7 +120,7 @@ export default function FlipTutorialScreen() {
               <TypewriterText
                 text={!focusModeOn 
                   ? "Now, for the magic. First, turn on Focus Mode calibration below."
-                  : "Perfect. Now, lay your phone face-down on the table right now."}
+                  : "Perfect. Now, with the screen ON, lay your phone face-down on the table."}
                 className="text-base font-bold text-klowk-black dark:text-white leading-5 text-center"
               />
             </View>
@@ -169,7 +169,7 @@ export default function FlipTutorialScreen() {
                 Magic. ✨
               </Text>
               <Text className="text-base font-bold text-zinc-500 dark:text-zinc-400 text-center leading-5">
-                "That’s how you start a session. No buttons, just focus."
+                "That’s how you start a session. Keep your screen ON and flip phone face down. No buttons, just focus."
               </Text>
             </View>
 

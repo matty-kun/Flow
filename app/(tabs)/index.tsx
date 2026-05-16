@@ -4,6 +4,7 @@ import GreetingSection from "@/components/home/GreetingSection";
 import QuickActions from "@/components/home/QuickActions";
 import RecentLogs from "@/components/home/RecentLogs";
 import SummaryPage from "@/components/log/SummaryPage";
+import WeeklyAuditModal from "@/components/home/WeeklyAuditModal";
 import { useSummaryVisible } from "@/context/SummaryVisibleContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
@@ -192,6 +193,7 @@ export default React.memo(function TabOneScreen() {
           </View>
         </ScrollView>
       </View>
+      <WeeklyAuditModal />
     </ScrollView>
   );
 });

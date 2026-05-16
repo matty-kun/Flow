@@ -79,7 +79,7 @@ export async function scheduleInactivityReminder(hour = 21, minute = 0) {
   if (isExpoGo) return;
   const Notifications = getNotifications();
 
-  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => { });
 
   const trigger: any = {
     type: "daily",
@@ -106,7 +106,7 @@ export async function scheduleInactivityReminder(hour = 21, minute = 0) {
 export async function cancelInactivityReminder() {
   if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(INACTIVITY_REMINDER_ID).catch(() => { });
   await AsyncStorage.setItem(INACTIVITY_REMINDER_KEY, "false");
 }
 
@@ -158,7 +158,7 @@ export async function scheduleTimerCompletionNotification(
 ): Promise<void> {
   if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => { });
   if (endTimeMs <= Date.now() + 2000) return;
   await Notifications.scheduleNotificationAsync({
     identifier: TIMER_NOTIFICATION_ID,
@@ -174,7 +174,7 @@ export async function scheduleTimerCompletionNotification(
 export async function cancelTimerCompletionNotification(): Promise<void> {
   if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(TIMER_NOTIFICATION_ID).catch(() => { });
 }
 
 const ONGOING_NOTIFICATION_ID = "timer-ongoing";
@@ -261,15 +261,15 @@ export async function showTimerOngoingNotification(
     const isWaiting = categoryOverride === TIMER_CATEGORY_WAITING;
     const actions = isWaiting
       ? [
-          { title: "Next Round ▶", pressAction: { id: TIMER_NEXT_ROUND_ACTION } },
-          { title: "Stop", pressAction: { id: TIMER_STOP_ACTION } },
-        ]
+        { title: "Next Round ▶", pressAction: { id: TIMER_NEXT_ROUND_ACTION } },
+        { title: "Stop", pressAction: { id: TIMER_STOP_ACTION } },
+      ]
       : paused
-      ? [
+        ? [
           { title: "Resume", pressAction: { id: TIMER_RESUME_ACTION } },
           { title: "Stop", pressAction: { id: TIMER_STOP_ACTION } },
         ]
-      : [
+        : [
           { title: "Pause", pressAction: { id: TIMER_PAUSE_ACTION } },
           { title: "Stop", pressAction: { id: TIMER_STOP_ACTION } },
         ];
@@ -374,13 +374,13 @@ export async function dismissTimerOngoingNotification(): Promise<void> {
 
   if (Platform.OS === "android") {
     const notifee = getNotifee();
-    await notifee.cancelNotification(ONGOING_NOTIFICATION_ID).catch(() => {});
+    await notifee.cancelNotification(ONGOING_NOTIFICATION_ID).catch(() => { });
     return;
   }
 
   const Notifications = getNotifications();
-  await Notifications.dismissNotificationAsync(ONGOING_NOTIFICATION_ID).catch(() => {});
-  await Notifications.cancelScheduledNotificationAsync(ONGOING_NOTIFICATION_ID).catch(() => {});
+  await Notifications.dismissNotificationAsync(ONGOING_NOTIFICATION_ID).catch(() => { });
+  await Notifications.cancelScheduledNotificationAsync(ONGOING_NOTIFICATION_ID).catch(() => { });
 }
 
 /**
@@ -393,7 +393,7 @@ export async function showWaitingBannerNotification(
 ): Promise<void> {
   if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.cancelScheduledNotificationAsync(WAITING_BANNER_ID).catch(() => {});
+  await Notifications.cancelScheduledNotificationAsync(WAITING_BANNER_ID).catch(() => { });
   await Notifications.scheduleNotificationAsync({
     identifier: WAITING_BANNER_ID,
     content: {
@@ -412,8 +412,8 @@ export async function showWaitingBannerNotification(
 export async function dismissWaitingBannerNotification(): Promise<void> {
   if (isExpoGo) return;
   const Notifications = getNotifications();
-  await Notifications.dismissNotificationAsync(WAITING_BANNER_ID).catch(() => {});
-  await Notifications.cancelScheduledNotificationAsync(WAITING_BANNER_ID).catch(() => {});
+  await Notifications.dismissNotificationAsync(WAITING_BANNER_ID).catch(() => { });
+  await Notifications.cancelScheduledNotificationAsync(WAITING_BANNER_ID).catch(() => { });
 }
 
 export async function sendLocalNotification(
@@ -430,7 +430,7 @@ export async function sendLocalNotification(
       sound: "default",
     },
     trigger: Platform.OS === "android"
-        ? { type: "channel", channelId: "default" } as Parameters<typeof Notifications.scheduleNotificationAsync>[0]["trigger"]
-        : null,
+      ? { type: "channel", channelId: "default" } as Parameters<typeof Notifications.scheduleNotificationAsync>[0]["trigger"]
+      : null,
   });
 }

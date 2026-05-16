@@ -1,7 +1,8 @@
 import { CategoryIcon } from "@/components/category/CategoryIcon";
 import ActionSheet from "@/components/ui/ActionSheet";
 import { useLanguage } from "@/context/LanguageContext";
-import { Activity, Category } from "@/context/TrackingContext";
+import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import LogCard from "@/components/log/LogCard";
 import { impact } from "@/utils/haptics";
 import { formatDate, formatLogDuration, formatTimestamp } from "@/utils/time";
 import { ImpactFeedbackStyle } from "expo-haptics";
@@ -45,6 +46,7 @@ export default function CategoryDetailSheet({
   const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
   const { t } = useLanguage();
+  const { customGoals } = useTracking();
   const slideAnim = useRef(new Animated.Value(width)).current;
   const [selectedActionLogId, setSelectedActionLogId] = useState<number | null>(null);
   const [selectedPomodoroIds, setSelectedPomodoroIds] = useState<number[] | null>(null);
@@ -233,102 +235,42 @@ export default function CategoryDetailSheet({
                   </Text>
                 </View>
               ) : (
-                displayLogs.map((log: any) => (
-                  <View
-                    key={log.isPomodoro ? `pomo-${log.pomodoroIds.join("-")}` : log.id}
-                    style={{
-                      backgroundColor: isDark ? "#18181b" : "#fff",
-                      padding: 20,
-                      borderRadius: 28,
-                      marginBottom: 12,
-                      flexDirection: "row",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      borderWidth: 1,
-                      borderColor: isDark ? "#27272a" : "#f3f4f6",
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 1 },
-                      shadowOpacity: 0.04,
-                      shadowRadius: 4,
-                      elevation: 1,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 15,
-                          fontWeight: "700",
-                          color: isDark ? "#fff" : "#121212",
-                          marginBottom: 6,
-                        }}
-                      >
-                        {log.title}
-                      </Text>
-                      <View style={{ flexDirection: "row", alignItems: "center", flexWrap: "wrap", gap: 6 }}>
-                        <Text
-                          style={{
-                            fontSize: 9,
-                            fontWeight: "700",
-                            color: isDark ? "#52525b" : "#9ca3af",
-                            textTransform: "uppercase",
-                          }}
-                        >
-                          {formatDate(log.start_time)} • {formatTimestamp(log.start_time)}
-                        </Text>
-                        {log.isPomodoro && (
-                          <View
-                            style={{
-                              backgroundColor: accentColor + "33",
-                              borderRadius: 20,
-                              paddingHorizontal: 7,
-                              paddingVertical: 2,
-                              flexDirection: "row",
-                              alignItems: "center",
-                            }}
-                          >
-                            <Text style={{ fontSize: 9 }}>🍅</Text>
-                            <Text
-                              style={{
-                                color: accentColor,
-                                fontSize: 9,
-                                fontWeight: "900",
-                                marginLeft: 3,
-                                textTransform: "uppercase",
-                              }}
-                            >
-                              {log.roundCount} {log.roundCount === 1 ? "round" : "rounds"}
-                            </Text>
-                          </View>
-                        )}
-                      </View>
-                    </View>
-                    <View style={{ alignItems: "flex-end", marginLeft: 12 }}>
-                      <Text
-                        style={{
-                          fontSize: 16,
-                          fontWeight: "900",
-                          color: isDark ? "#fff" : "#121212",
-                        }}
-                      >
-                        {formatLogDuration(log.start_time, log.end_time ?? null, log.duration ?? null)}
-                      </Text>
-                      <Pressable
-                        onPress={() => {
-                          impact(ImpactFeedbackStyle.Light);
-                          if (log.isPomodoro) {
-                            setSelectedPomodoroIds(log.pomodoroIds);
-                          } else {
-                            setSelectedActionLogId(log.id);
-                          }
-                        }}
-                        hitSlop={10}
-                        style={{ padding: 4, marginTop: 4 }}
-                      >
-                        <MoreHorizontal size={15} color="#9ca3af" />
-                      </Pressable>
-                    </View>
-                  </View>
-                ))
+                displayLogs.map((log: any) => {
+                  const matchedGoal = customGoals.find(
+                    (g) =>
+                      (log.title === g.name || log.title.startsWith(g.name + " —")) &&
+                      log.category === g.categoryId,
+                  );
+                  let displayTitle = log.title;
+                  if (matchedGoal) {
+                    if (log.title === matchedGoal.name) {
+                      displayTitle = "";
+                    } else if (log.title.startsWith(matchedGoal.name + " — ")) {
+                      displayTitle = log.title.replace(matchedGoal.name + " — ", "");
+                    }
+                  }
+
+                  return (
+                    <LogCard
+                      key={log.isPomodoro ? `pomo-${log.pomodoroIds.join("-")}` : log.id}
+                      log={{ ...log, title: displayTitle }}
+                      categoryColor={catData?.color || "#6b7280"}
+                      categoryLabel={catData?.label || t("personal")}
+                      categoryIconName={catData?.iconName || "tag"}
+                      pomodoroRounds={log.roundCount}
+                      goalName={matchedGoal?.name}
+                      hideCategoryLabel={true}
+                      onPressMore={() => {
+                        impact(ImpactFeedbackStyle.Light);
+                        if (log.isPomodoro) {
+                          setSelectedPomodoroIds(log.pomodoroIds);
+                        } else {
+                          setSelectedActionLogId(log.id);
+                        }
+                      }}
+                    />
+                  );
+                })
               )}
             </View>
             <View style={{ height: 100 }} />

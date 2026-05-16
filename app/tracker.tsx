@@ -16,7 +16,7 @@ import { clearTimerState, loadTimerState, saveTimerState } from "@/utils/timerSt
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { ImpactFeedbackStyle } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { ChevronDown, Save } from "lucide-react-native";
+import { ChevronDown, Save, Check } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React, { useEffect, useRef, useState } from "react";
 import { AppState, Image, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from "react-native";
@@ -42,6 +42,7 @@ export default function TrackerPage() {
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
   const [totalPausedMs, setTotalPausedMs] = useState(0);
   const [showSummaryModal, setShowSummaryModal] = useState(false);
+  const [peekCount, setPeekCount] = useState(0);
   
   // Summary Form State - Clear defaults so user picks at end
   const [sessionTitle, setSessionTitle] = useState("");
@@ -154,6 +155,7 @@ export default function TrackerPage() {
       if (isDiscard && currentActivity) {
         await dbDelete(currentActivity.id);
       } else {
+        const finalDescription = sessionNotes.trim() ? `${sessionNotes.trim()}\n[peeks:${peekCount}]` : `[peeks:${peekCount}]`;
         if (sessionGoalIds.length > 0) {
           // Split session into multiple logs, one per goal
           for (let i = 0; i < sessionGoalIds.length; i++) {
@@ -168,7 +170,7 @@ export default function TrackerPage() {
               await stopTracker({
                 title: finalTitle,
                 category: categoryId,
-                description: sessionNotes.trim() || undefined,
+                description: finalDescription,
               });
             } else {
               // Create a manual log for additional goals
@@ -176,7 +178,7 @@ export default function TrackerPage() {
                 finalTitle,
                 categoryId,
                 accumulatedSecs,
-                sessionNotes.trim() || undefined,
+                finalDescription,
                 new Date()
               );
             }
@@ -186,7 +188,7 @@ export default function TrackerPage() {
           await stopTracker({
             title: sessionTitle.trim() || "Focus Session",
             category: activity?.category || "focus",
-            description: sessionNotes.trim() || undefined,
+            description: finalDescription,
           });
         }
       }
@@ -243,30 +245,37 @@ export default function TrackerPage() {
   // ── Timer tick ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    if (currentActivity) {
-      setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time - totalPausedMs) / 1000));
-    }
-  }, [currentActivity?.id, isPaused, totalPausedMs]);
+    if (!currentActivity) return;
 
-  useEffect(() => {
-    if (isPaused || !currentActivity) return;
     const sync = () => {
-      setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time - totalPausedMs) / 1000));
+      const nowMs = (isPaused && pausedAtMs.current) ? pausedAtMs.current : Date.now();
+      const elapsed = Math.floor((nowMs - currentActivity.start_time - totalPausedMs) / 1000);
+      setAccumulatedSecs(Math.max(0, elapsed));
     };
+
     sync();
-    const interval = setInterval(sync, 1000);
+
+    const interval = setInterval(() => {
+      if (!isPaused) sync();
+    }, 1000);
+
     const sub = AppState.addEventListener("change", async (state) => {
-      if (state !== "active") return;
-      sync();
-      if (Platform.OS === "android") {
-        const pending = await AsyncStorage.getItem("pending_notif_action");
-        if (pending && pending !== "open_tracker") {
-          await AsyncStorage.removeItem("pending_notif_action");
-          if (pending === TIMER_STOP_ACTION) handleStopRef.current();
-          else if (pending === TIMER_PAUSE_ACTION || pending === TIMER_RESUME_ACTION) togglePauseRef.current();
+      if (state === "active") {
+        sync();
+        if (Platform.OS === "android") {
+          const pending = await AsyncStorage.getItem("pending_notif_action");
+          if (pending && pending !== "open_tracker") {
+            await AsyncStorage.removeItem("pending_notif_action");
+            if (pending === TIMER_STOP_ACTION) {
+              if (!isPaused) togglePauseRef.current();
+              setShowSummaryModal(true);
+            }
+            else if (pending === TIMER_PAUSE_ACTION || pending === TIMER_RESUME_ACTION) togglePauseRef.current();
+          }
         }
       }
     });
+
     return () => { clearInterval(interval); sub.remove(); };
   }, [currentActivity, isPaused, totalPausedMs]);
 
@@ -275,6 +284,7 @@ export default function TrackerPage() {
     if (!currentActivity) return;
     
     if (isFaceUp && !isPaused) {
+      setPeekCount(p => p + 1);
       togglePause(); // Auto-pause when flipped up
     } else if (!isFaceUp && isPaused) {
       togglePause(); // Auto-resume when flipped down
@@ -369,7 +379,7 @@ export default function TrackerPage() {
       {/* Summary Modal */}
       <Modal
         visible={showSummaryModal}
-        animationType="slide"
+        animationType="fade"
         transparent={true}
         onRequestClose={() => setShowSummaryModal(false)}
       >
@@ -409,7 +419,7 @@ export default function TrackerPage() {
                   className="bg-gray-100 dark:bg-black/40 p-4 rounded-[24px] flex-row items-center justify-between border border-gray-200 dark:border-zinc-800"
                   style={sessionGoalIds.length > 0 ? { borderColor: accentColor + "40", backgroundColor: accentColor + "10" } : {}}
                 >
-                  <View className="flex-row items-center">
+                  <View className="flex-row items-center flex-1 mr-3">
                     <View 
                       style={{ backgroundColor: sessionGoalIds.length > 0 ? accentColor + "20" : "rgba(128,128,128,0.1)" }}
                       className="w-14 h-14 rounded-2xl items-center justify-center mr-4"
@@ -447,7 +457,7 @@ export default function TrackerPage() {
                 {/* Goal Bottom Sheet */}
                 <Modal
                   visible={showGoalPicker}
-                  animationType="slide"
+                  animationType="fade"
                   transparent={true}
                   onRequestClose={() => setShowGoalPicker(false)}
                 >
@@ -521,7 +531,7 @@ export default function TrackerPage() {
                                 </View>
                                 {isSelected && (
                                   <View style={{ backgroundColor: accentColor }} className="w-6 h-6 rounded-full items-center justify-center">
-                                    <View className="w-3 h-3 border-b-2 border-r-2 border-white rotate-45 mb-1" />
+                                    <Check size={14} color="white" strokeWidth={3} />
                                   </View>
                                 )}
                               </TouchableOpacity>
@@ -567,30 +577,22 @@ export default function TrackerPage() {
                 style={{ 
                   backgroundColor: (!sessionTitle.trim() && sessionGoalIds.length === 0) 
                     ? (isDark ? "#2A2A2A" : "#F3F4F6") 
-                    : (accentColor === "#FFFFFF" ? "transparent" : accentColor),
-                  overflow: 'hidden'
+                    : accentColor,
+                  borderColor: isDark ? "#27272a" : "#e5e7eb",
+                  borderWidth: accentColor === (isDark ? "#121212" : "#FFFFFF") ? 1 : 0,
                 }}
-                className="flex-[2] h-[80px] rounded-3xl items-center justify-center"
+                className="flex-[2] h-[80px] rounded-3xl items-center justify-center flex-row"
               >
                 {(!sessionTitle.trim() && sessionGoalIds.length === 0) ? (
-                  <View className="flex-row items-center justify-center">
+                  <>
                     <Save size={18} color="#666" />
                     <Text className="text-[#666] font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
-                  </View>
-                ) : accentColor === "#FFFFFF" ? (
-                  <LinearGradient
-                    colors={["#FFFFFF", "#CBD5E1"]}
-                    style={StyleSheet.absoluteFill}
-                    className="flex-row items-center justify-center"
-                  >
-                    <Save size={18} color="#121212" />
-                    <Text className="text-klowk-black font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
-                  </LinearGradient>
+                  </>
                 ) : (
-                  <View className="flex-row items-center justify-center">
-                    <Save size={18} color="white" />
-                    <Text className="text-white font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
-                  </View>
+                  <>
+                    <Save size={18} color={accentColor === "#FFFFFF" ? "#121212" : "white"} />
+                    <Text style={{ color: accentColor === "#FFFFFF" ? "#121212" : "white" }} className="font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
+                  </>
                 )}
               </TouchableOpacity>
             </View>

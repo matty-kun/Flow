@@ -20,10 +20,11 @@ type Props = {
   categoryIconName: string;
   pomodoroRounds?: number;
   goalName?: string;
+  hideCategoryLabel?: boolean;
   onPressMore: () => void;
 };
 
-export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, goalName, onPressMore }: Props) {
+export default React.memo(function LogCard({ log, categoryColor, categoryLabel, categoryIconName, pomodoroRounds, goalName, hideCategoryLabel, onPressMore }: Props) {
   const { t } = useLanguage();
   const { accentColor } = useAppTheme();
 
@@ -50,9 +51,11 @@ export default React.memo(function LogCard({ log, categoryColor, categoryLabel, 
           )}
         </View>
         <View className="flex-row items-center flex-wrap gap-y-1">
-          <Text style={{ color: categoryColor }} className="text-[10px] font-black uppercase mr-2">
-            {categoryLabel}
-          </Text>
+          {!hideCategoryLabel && (
+            <Text style={{ color: categoryColor }} className="text-[10px] font-black uppercase mr-2">
+              {categoryLabel}
+            </Text>
+          )}
           {pomodoroRounds != null && (
             <View style={{ backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, marginRight: 6, flexDirection: "row", alignItems: "center" }}>
               <Text style={{ fontSize: 9 }}>🍅</Text>

@@ -105,21 +105,12 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
         />
       </View>
 
-      {lastNote ? (
+      {lastNote && (
         <View className="bg-gray-50 dark:bg-black/20 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
           <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Last State</Text>
           <Text className="text-xs font-bold text-gray-600 dark:text-gray-300 leading-5" numberOfLines={2}>
             "{lastNote}"
           </Text>
-        </View>
-      ) : (
-        <View className="flex-row justify-between items-center px-1">
-            <View />
-           {isRecentlyActive && (
-             <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-widest">
-               Active Session
-             </Text>
-           )}
         </View>
       )}
     </MotiView>

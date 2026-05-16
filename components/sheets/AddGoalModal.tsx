@@ -195,7 +195,7 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
                   <TextInput
                     value={goalName}
                     onChangeText={setGoalName}
-                    placeholder="e.g. Master React Native"
+                    placeholder="e.g. Learn Spanish, Read 30 pages, Workout..."
                     placeholderTextColor={isDark ? "#52525b" : "#9ca3af"}
                     className="text-lg font-black text-klowk-black dark:text-white"
                     returnKeyType="done"

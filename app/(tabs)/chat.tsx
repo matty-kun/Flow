@@ -101,11 +101,11 @@ export default function ChatScreen() {
     const totalFocusWeek = weekActivities.reduce((s, a) => s + (a.duration || 0), 0);
 
     // Find Top Category
-    const catMins: Record<string, number> = {};
+    const catMinsTotal: Record<string, number> = {};
     activities.forEach(a => {
-      if (a.category) catMins[a.category] = (catMins[a.category] || 0) + (a.duration || 0);
+      if (a.category) catMinsTotal[a.category] = (catMinsTotal[a.category] || 0) + (a.duration || 0);
     });
-    const topCatId = Object.entries(catMins).sort((a, b) => b[1] - a[1])[0]?.[0];
+    const topCatId = Object.entries(catMinsTotal).sort((a, b) => b[1] - a[1])[0]?.[0];
     const topCategory = categories.find(c => c.id === topCatId)?.label;
 
     // Compute Streak
@@ -117,72 +117,133 @@ export default function ChatScreen() {
       check.setDate(check.getDate() - 1);
     }
 
-    // --- LOCAL INTELLIGENCE FOR TEMPLATES ---
+    // --- ADVANCED LOCAL INTELLIGENCE ENGINE ---
     const getLocalResponse = () => {
       const lowerText = textToUse.toLowerCase();
       
       const formatMins = (m: number) => {
+        if (m <= 0) return "0m";
         if (m < 60) return `${m}m`;
         const h = Math.floor(m / 60);
         const rm = m % 60;
         return rm > 0 ? `${h}h ${rm}m` : `${h}h`;
       };
 
-      if (lowerText.includes("how much did i focus today")) {
-        const total = Math.floor(totalFocusToday / 60);
-        if (total === 0) return "You haven't started focusing yet today. Let's get into flow!";
-        return `You've logged ${formatMins(total)} of focus time today. Great work, ${userName || "there"}!`;
-      }
-
-      if (lowerText.includes("top category")) {
-        if (!topCategory) return "I don't have enough data yet to determine your top category.";
-        return `Your most focused category is ${topCategory}. That's where you're spending the most flow time!`;
-      }
-
-      if (lowerText.includes("summarize my day")) {
-        if (todayActivities.length === 0) return "Your day hasn't been logged yet. Ready to start a session?";
+      // 1. TODAY INTENT
+      if (/(today.*focus|focus.*today|how much.*today|logged.*today|work.*today|time.*today|what did i.*today)/.test(lowerText)) {
+        const totalMins = Math.floor(totalFocusToday / 60);
+        if (totalMins === 0) {
+          return "You haven't logged any focus time today yet. Find a quiet spot, flip your phone face down, and let's get into flow!";
+        }
         const sessionCount = todayActivities.length;
-        const summary = todayActivities.map(a => `• ${a.title} (${Math.floor((a.duration || 0)/60)}m)`).join("\n");
-        return `You've had ${sessionCount} focus sessions today:\n\n${summary}\n\nTotal: ${formatMins(Math.floor(totalFocusToday/60))}`;
+        const breakdown = todayActivities.map(a => `• ${a.title || "Session"} (${Math.floor((a.duration || 0)/60)}m)`).join("\n");
+        return `You've logged ${formatMins(totalMins)} of focus today across ${sessionCount} sessions:\n\n${breakdown}\n\nExcellent momentum, ${userName || "there"}!`;
       }
 
-      if (lowerText.includes("analyze my productivity this week")) {
-        const total = Math.floor(totalFocusWeek / 60);
-        const goalProgress = customGoals.length > 0 
-          ? `You are working towards ${customGoals.length} active goals.` 
-          : "You haven't set any weekly goals yet.";
-        return `This week you've focused for ${formatMins(total)}. ${goalProgress} Consistency is key to long-term growth!`;
+      // 2. WEEKLY INTENT
+      if (/(week.*focus|focus.*week|this week|productivity.*week|weekly.*summary|how.*this week)/.test(lowerText)) {
+        const totalWeekMins = Math.floor(totalFocusWeek / 60);
+        if (totalWeekMins === 0) {
+          return "You haven't logged any focus sessions yet this week. Every great journey starts with a single 15-minute session!";
+        }
+        const activeDays = new Set(weekActivities.map(a => new Date(a.start_time).toDateString())).size;
+        const avgPerDay = activeDays > 0 ? Math.round(totalWeekMins / activeDays) : 0;
+        return `This week you've focused for a total of ${formatMins(totalWeekMins)} across ${activeDays} active days (averaging ${formatMins(avgPerDay)} per day). Keep up the great pace!`;
       }
 
-      if (lowerText.includes("am i on track")) {
-        if (customGoals.length === 0) return "You don't have any active goals. Setting a goal is the first step to staying on track!";
-        const progress = customGoals.map(g => {
+      // 3. CATEGORY BREAKDOWN INTENT
+      if (/(top.*category|favorite.*category|most.*focused|category.*breakdown|where.*spend.*time|category.*stats|categories)/.test(lowerText)) {
+        if (activities.length === 0) return "I don't have enough session data yet to analyze your categories.";
+        const catMins: Record<string, number> = {};
+        let totalMins = 0;
+        activities.forEach(a => {
+          const m = Math.floor((a.duration || 0) / 60);
+          const cId = a.category || "other";
+          catMins[cId] = (catMins[cId] || 0) + m;
+          totalMins += m;
+        });
+        if (totalMins === 0) return "You haven't logged enough duration yet to build a category breakdown.";
+        
+        const sortedCats = Object.entries(catMins).sort((a, b) => b[1] - a[1]);
+        const breakdownStr = sortedCats.slice(0, 4).map(([id, mins]) => {
+          const label = categories.find(c => c.id === id)?.label || id;
+          const pct = Math.round((mins / totalMins) * 100);
+          return `• ${label}: ${pct}% (${formatMins(mins)})`;
+        }).join("\n");
+        
+        const topCatLabel = categories.find(c => c.id === sortedCats[0][0])?.label || "Work";
+        return `Here is your all-time category breakdown:\n\n${breakdownStr}\n\nYour top flow driver is definitely ${topCatLabel}!`;
+      }
+
+      // 4. STREAK INTENT
+      if (/(streak|consistency|consecutive|days.*in.*a.*row|how consistent)/.test(lowerText)) {
+        if (streak === 0) {
+          return "You're starting fresh! Log a focus session today to kick off your consistency streak.";
+        }
+        const startDay = new Date(); startDay.setDate(startDay.getDate() - streak + 1);
+        const dayStr = startDay.toLocaleDateString(undefined, { weekday: "long" });
+        return `🔥 You are currently on a ${streak}-day focus streak! You've maintained deep work every single day since ${dayStr}. Consistency is your ultimate superpower!`;
+      }
+
+      // 5. GOALS INTENT
+      if (/(goal|on.*track|target|achieve|aim|milestone|how are my goals)/.test(lowerText)) {
+        if (customGoals.length === 0) {
+          return "You don't have any active weekly goals. Setting a target (like 5 hours of Coding or Reading) is the best way to stay on track!";
+        }
+        const progressStr = customGoals.map(g => {
           const goalLogs = activities.filter(a => a.category === g.categoryId && a.start_time >= g.startDate && a.start_time <= g.endDate);
           const loggedMins = Math.floor(goalLogs.reduce((s, a) => s + (a.duration || 0), 0) / 60);
-          const pct = Math.round((loggedMins / g.targetMins) * 100);
-          return `• ${g.name}: ${pct}% (${formatMins(loggedMins)} / ${formatMins(g.targetMins)})`;
-        }).join("\n");
-        return `Here is your current goal progress:\n\n${progress}\n\nKeep pushing, you're doing great!`;
+          const pct = Math.min(100, Math.round((loggedMins / g.targetMins) * 100));
+          const checkMark = pct >= 100 ? "✅" : "⏳";
+          return `• ${g.name}: ${pct}% ${checkMark}\n  (${formatMins(loggedMins)} / ${formatMins(g.targetMins)})`;
+        }).join("\n\n");
+        return `Here is your live goal status for this week:\n\n${progressStr}\n\nYou're making solid progress toward your targets!`;
       }
 
-      if (lowerText.includes("recent wins")) {
+      // 6. PEAK PERFORMANCE / TIME OF DAY INTENT
+      if (/(when.*do.*i|time.*of.*day|morning|afternoon|evening|night|peak.*performance|best.*time)/.test(lowerText)) {
+        if (activities.length === 0) return "Log a few sessions at different times of day so I can determine your peak performance hours!";
+        const counts = { Morning: 0, Afternoon: 0, Evening: 0, Night: 0 };
+        let total = 0;
+        activities.forEach(a => {
+          const hr = new Date(a.start_time).getHours();
+          if (hr >= 5 && hr < 12) counts.Morning++;
+          else if (hr >= 12 && hr < 17) counts.Afternoon++;
+          else if (hr >= 17 && hr < 22) counts.Evening++;
+          else counts.Night++;
+          total++;
+        });
+        if (total === 0) return "No timestamp data available.";
+        const peak = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+        const pct = Math.round((peak[1] / total) * 100);
+        return `I analyzed your focus timestamps and found that you log ${pct}% of your sessions in the ${peak[0]}. You hit peak mental clarity during these hours!`;
+      }
+
+      // 7. WINS INTENT
+      if (/(win|accomplish|proud|success|victory|motivat|inspire|did good)/.test(lowerText)) {
         const completed = customGoals.filter(g => {
           const goalLogs = activities.filter(a => a.category === g.categoryId && a.start_time >= g.startDate && a.start_time <= g.endDate);
           const loggedMins = Math.floor(goalLogs.reduce((s, a) => s + (a.duration || 0), 0) / 60);
           return loggedMins >= g.targetMins;
         });
-        if (completed.length > 0) return `Huge wins! You've already completed these goals: ${completed.map(g => g.name).join(", ")}. Keep that momentum!`;
-        if (streak > 2) return `You're on a ${streak}-day streak! That's a major win for your consistency.`;
-        return "Every minute of focus is a win. You're building the habit right now!";
+        const longSessions = activities.filter(a => (a.duration || 0) >= 3600);
+        
+        let winMsg = "";
+        if (completed.length > 0) winMsg += `🎉 You've successfully completed ${completed.length} weekly goals (${completed.map(g => g.name).join(", ")}).\n\n`;
+        if (longSessions.length > 0) winMsg += `💪 You've achieved ${longSessions.length} deep work sessions lasting over an hour.\n\n`;
+        if (streak > 2) winMsg += `🔥 You're holding a strong ${streak}-day consistency streak.`;
+        
+        return winMsg ? `Here are your recent major wins:\n\n${winMsg}` : "Every single minute you spend in deep focus is a victory over distraction. Keep building the habit!";
       }
 
-      if (lowerText.includes("tips")) {
+      // 8. TIPS & ADVICE INTENT
+      if (/(tip|advice|recommend|suggest|how.*to.*focus|distract|procrastinat|unfocus|can't focus)/.test(lowerText)) {
         const tips = [
-          "Try the 25/5 Pomodoro technique to maintain high mental energy.",
-          "Clear your physical workspace to reduce visual distractions.",
-          "Always define one clear goal before starting a focus session.",
-          "Deep work is best done in the first 4 hours of your day.",
-          "Turn off all non-essential notifications before you flow."
+          "Try the 25/5 Pomodoro rhythm: Work for 25 minutes, then take a strict 5-minute break away from all screens to recharge your mental battery.",
+          "Physical workspace audit: Visual clutter creates subconscious cognitive load. Take 2 minutes to clear your desk before flipping your phone.",
+          "One Goal Rule: Never start a timer without deciding on exactly one deliverable. Multi-tasking destroys deep flow state.",
+          "Peak Energy Window: Protect your first 3 hours after waking up. Use this pristine energy for your hardest, highest-priority task.",
+          "Eliminate friction: Put your phone on 'Do Not Disturb' before you start your flip ritual."
         ];
         return tips[Math.floor(Math.random() * tips.length)];
       }
@@ -360,8 +421,8 @@ export default function ChatScreen() {
               <Send size={18} color={accentColor === "#FFFFFF" ? "#121212" : "white"} />
             </Pressable>
           </View>
-          <Text className="text-center text-[10px] font-medium text-gray-400 dark:text-zinc-600 mt-4 px-4">
-            AI can make mistakes. Please review important details before acting on them
+          <Text className="text-center text-[10px] font-bold tracking-wider text-gray-400 dark:text-zinc-600 mt-4 px-4 uppercase">
+            Your attention is your most valuable asset • Protect your flow
           </Text>
         </View>
       </KeyboardAvoidingView>

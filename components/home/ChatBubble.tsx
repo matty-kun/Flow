@@ -1,6 +1,6 @@
 import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Animated, Pressable, Text, View } from "react-native";
 import { useAppTheme } from "@/context/ThemeContext";
 
@@ -71,16 +71,46 @@ export const ChatBubble = React.memo(function ChatBubble({ message, fadeAnim, on
   );
 });
 
-export const TypingBubble = React.memo(function TypingBubble() {
+const Dot = ({ animValue, index }: { animValue: Animated.Value; index: number }) => {
+  const opacity = animValue.interpolate({
+    inputRange: [0, index * 0.25, (index + 1) * 0.25, 1],
+    outputRange: [0.2, 0.2, 1, 0.2],
+  });
+  const translateY = animValue.interpolate({
+    inputRange: [0, index * 0.25, (index + 1) * 0.25, 1],
+    outputRange: [0, 0, -4, 0],
+  });
   return (
-    <View className="mb-6 flex-row justify-start">
+    <Animated.Text style={{ opacity, transform: [{ translateY }], fontSize: 24, fontWeight: "900", color: "#a1a1aa", marginHorizontal: 2, lineHeight: 24 }}>
+      •
+    </Animated.Text>
+  );
+};
+
+export const TypingBubble = React.memo(function TypingBubble() {
+  const anim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.loop(
+      Animated.timing(anim, {
+        toValue: 1,
+        duration: 1000,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [anim]);
+
+  return (
+    <View className="mb-6 flex-row justify-start items-center">
       <Image
         source={require("../../assets/images/flow portrait.png")}
         style={{ width: 32, height: 32, borderRadius: 10, marginRight: 12 }}
         contentFit="cover"
       />
-      <View className="bg-gray-50 dark:bg-zinc-900 p-4 rounded-[24px] rounded-tl-none">
-        <Text className="text-gray-400 dark:text-zinc-600 font-black">...</Text>
+      <View className="bg-gray-50 dark:bg-zinc-900 px-5 py-3 rounded-[24px] rounded-tl-none flex-row items-center justify-center">
+        <Dot animValue={anim} index={1} />
+        <Dot animValue={anim} index={2} />
+        <Dot animValue={anim} index={3} />
       </View>
     </View>
   );

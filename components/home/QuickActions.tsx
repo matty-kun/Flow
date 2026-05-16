@@ -88,7 +88,7 @@ export default function QuickActions() {
             2. Flip to Focus
           </Text>
           <Text style={{ fontSize: 11, color: isDark ? "#71717a" : "#9ca3af", marginTop: 2 }}>
-            Place phone face down to start
+            Keep screen on & place phone face down
           </Text>
         </View>
         <ChevronRight size={20} color={isDark ? "#3f3f46" : "#e5e7eb"} />
