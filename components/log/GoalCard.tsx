@@ -23,9 +23,10 @@ type Props = {
   index?: number;
   isRecentlyActive?: boolean;
   onPressMore: () => void;
+  lastNote?: string;
 };
 
-export default function GoalCard({ goal, catData, currentMins, index = 0, isRecentlyActive = false, onPressMore }: Props) {
+export default function GoalCard({ goal, catData, currentMins, index = 0, isRecentlyActive = false, onPressMore, lastNote }: Props) {
   const { colorScheme } = useColorScheme();
   const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
@@ -35,74 +36,92 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
     mins < 60 ? `${mins}m` : `${(mins / 60).toFixed(1).replace(".0", "")}h`;
   const pct = Math.min(100, (currentMins / goal.targetMins) * 100) || 0;
   const isCompleted = pct >= 100;
-  const daysRemaining = Math.max(
-    0,
-    Math.ceil((goal.endDate - Date.now()) / (1000 * 60 * 60 * 24)),
-  );
 
   return (
     <MotiView
-      from={{ opacity: 0, translateY: 10 }}
-      animate={{ opacity: 1, translateY: 0 }}
-      transition={{ delay: 200 + index * 50 }}
+      from={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ delay: 100 + index * 50, type: "spring" }}
+      className="mb-4"
       style={{
-        backgroundColor: isRecentlyActive ? accentColor + "1A" : isDark ? "#18181b" : "#fff",
-        borderRadius: 32,
+        backgroundColor: isDark ? "#1A1A1A" : "#FFFFFF",
+        borderRadius: 36,
+        padding: 24,
         borderWidth: 1,
-        borderColor: isRecentlyActive ? accentColor + "4D" : isDark ? "#27272a" : "#f3f4f6",
+        borderColor: isRecentlyActive ? accentColor : (isDark ? "#2A2A2A" : "#F0F0F0"),
         shadowColor: "#000",
-        shadowOpacity: 0.04,
-        shadowRadius: 4,
-        padding: 20,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: isDark ? 0.3 : 0.05,
+        shadowRadius: 20,
+        elevation: 5
       }}
     >
-      {isRecentlyActive && (
-        <View style={{ position: "absolute", top: 14, right: 14, backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 8, paddingVertical: 3 }}>
-          <Text style={{ fontSize: 8, fontWeight: "900", color: getContrastingColor(accentColor, isDark), textTransform: "uppercase", letterSpacing: 0.5 }}>Active</Text>
-        </View>
-      )}
-      <View className="flex-row items-center justify-between mb-4">
-        <View className="flex-row items-center flex-1 pr-4">
+      <View className="flex-row items-center justify-between mb-6">
+        <View className="flex-row items-center flex-1">
           <View
-            style={{ backgroundColor: `${catData.color}15` }}
-            className="w-12 h-12 rounded-[16px] items-center justify-center mr-4"
+            style={{ backgroundColor: catData.color + "15" }}
+            className="w-14 h-14 rounded-2xl items-center justify-center mr-4"
           >
-            <CategoryIcon name={catData.iconName} size={22} color={catData.color} customImageUri={catData.customImageUri} />
+            <CategoryIcon name={catData.iconName} size={28} color={catData.color} customImageUri={catData.customImageUri} />
           </View>
           <View className="flex-1">
-            <Text
-              className="text-lg font-black text-[#121212] dark:text-white leading-tight mb-1"
-              numberOfLines={1}
-            >
+            <Text className="text-xl font-black text-klowk-black dark:text-white leading-tight" numberOfLines={1}>
               {goal.name}
             </Text>
-            <Text className="text-[11px] font-bold tracking-widest uppercase text-gray-400 dark:text-zinc-500">
-              {t(catData.id as any) || catData.label}
-            </Text>
+            <View className="flex-row items-center mt-1">
+              <View 
+                style={{ backgroundColor: catData.color }}
+                className="w-2 h-2 rounded-full mr-2" 
+              />
+              <Text className="text-[10px] font-black uppercase tracking-widest text-gray-400">
+                {formatTime(goal.targetMins)} / Week
+              </Text>
+            </View>
           </View>
         </View>
-        <View className="items-end">
-          {!isCompleted && (
-            <Pressable hitSlop={15} style={{ marginBottom: 4 }} onPress={onPressMore}>
-              <MoreHorizontal size={18} color={isDark ? "#52525b" : "#9ca3af"} />
-            </Pressable>
-          )}
-          <Text className="text-xs font-black text-[#121212] dark:text-white">
-            {formatTime(currentMins)}{" "}
-            <Text className="text-gray-400">/ {formatTime(goal.targetMins)}</Text>
-          </Text>
-          <Text className="text-[10px] font-bold text-gray-400 mt-1 uppercase">
-            {daysRemaining} {daysRemaining === 1 ? t("day_left") : t("days_left")}
-          </Text>
-        </View>
+        <Pressable onPress={onPressMore} hitSlop={20} className="p-2 -mr-2">
+          <MoreHorizontal size={20} color={isDark ? "#52525b" : "#9ca3af"} />
+        </Pressable>
       </View>
 
-      <ProgressBar
-        progress={pct / 100}
-        color={isCompleted ? "#10b981" : catData.color}
-        trackColor={isDark ? "#27272a" : "#f3f4f6"}
-        height={8}
-      />
+      <View className="mb-6">
+        <View className="flex-row justify-between items-end mb-3">
+          <View>
+            <Text className="text-[10px] font-black text-gray-400 uppercase tracking-tighter mb-1">CURRENT PROGRESS</Text>
+            <Text className="text-2xl font-black text-klowk-black dark:text-white">
+              {formatTime(currentMins)} <Text className="text-gray-400 text-sm">logged</Text>
+            </Text>
+          </View>
+          <Text style={{ color: isCompleted ? "#10b981" : catData.color }} className="text-sm font-black">
+            {Math.round(pct)}%
+          </Text>
+        </View>
+        
+        <ProgressBar
+          progress={pct / 100}
+          color={isCompleted ? "#10b981" : catData.color}
+          trackColor={isDark ? "#27272a" : "#f3f4f6"}
+          height={10}
+        />
+      </View>
+
+      {lastNote ? (
+        <View className="bg-gray-50 dark:bg-black/20 p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+          <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1.5">Last State</Text>
+          <Text className="text-xs font-bold text-gray-600 dark:text-gray-300 leading-5" numberOfLines={2}>
+            "{lastNote}"
+          </Text>
+        </View>
+      ) : (
+        <View className="flex-row justify-between items-center px-1">
+            <View />
+           {isRecentlyActive && (
+             <Text style={{ color: accentColor }} className="text-[10px] font-black uppercase tracking-widest">
+               Active Session
+             </Text>
+           )}
+        </View>
+      )}
     </MotiView>
   );
 }

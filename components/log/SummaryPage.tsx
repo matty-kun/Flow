@@ -81,7 +81,7 @@ export default function SummaryPage({ activities, categories, width }: Props) {
   const [period, setPeriod] = useState<Period>("today");
 
   // Determine if the background (accentColor) is dark to adjust text colors
-  const isAccentDark = accentColor === "#18181b" || accentColor === "#6366f1" || accentColor === "#8b5cf6" || accentColor === "#f43f5e";
+  const isAccentDark = (accentColor !== "#FFFFFF") && (accentColor === "#18181b" || accentColor === "#6366f1" || accentColor === "#8b5cf6" || accentColor === "#f43f5e");
   
   const TEXT = isAccentDark ? "#FFFFFF" : "#121212";
   const TEXT_SUB = isAccentDark ? "rgba(255,255,255,0.7)" : "rgba(18,18,18,0.5)";
@@ -235,7 +235,7 @@ export default function SummaryPage({ activities, categories, width }: Props) {
         <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, marginBottom: 12 }}>
           <Image
             source={require("@/assets/images/silhouette.png")}
-            style={{ width: 26, height: 26, borderRadius: 13 }}
+            style={{ width: 26, height: 26, borderRadius: 13, tintColor: TEXT }}
           />
           <View>
             <Text style={{ fontSize: 12, fontWeight: "900", color: TEXT }}>flow</Text>

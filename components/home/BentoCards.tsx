@@ -43,9 +43,9 @@ export default function BentoCards({ categoryStats, activeGoalsCount, customGoal
 
   return (
     <MotiView
-      from={{ opacity: 0, translateY: 10 }}
+      from={{ opacity: 0, translateY: 20 }}
       animate={{ opacity: 1, translateY: 0 }}
-      transition={{ type: "timing", delay: 600 }}
+      transition={{ type: "timing", duration: 600, delay: 500 }}
       style={{ paddingHorizontal: 24, marginBottom: 28, flexDirection: "row", justifyContent: "space-between" }}
     >
       {/* Categories Card */}

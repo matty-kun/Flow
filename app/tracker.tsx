@@ -1,105 +1,79 @@
-import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useTracking } from "@/context/TrackingContext";
 import TimerControls from "@/components/tracker/TimerControls";
-import TimerRing, { CIRCUMFERENCE } from "@/components/tracker/TimerRing";
-import TimerSettingsModal from "@/components/tracker/TimerSettingsModal";
+import { CategoryIcon } from "@/components/category/CategoryIcon";
+import { useFocusMode } from "@/context/FocusModeContext";
+import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
+import { useTracking } from "@/context/TrackingContext";
+import { impact } from "@/utils/haptics";
 import {
-  cancelTimerCompletionNotification,
   dismissTimerOngoingNotification,
-  dismissWaitingBannerNotification,
-  scheduleTimerCompletionNotification,
-  sendLocalNotification,
   setupTimerNotificationCategory,
   showTimerOngoingNotification,
-  showWaitingBannerNotification,
-  TIMER_CATEGORY_WAITING,
-  TIMER_NEXT_ROUND_ACTION,
   TIMER_PAUSE_ACTION,
   TIMER_RESUME_ACTION,
   TIMER_STOP_ACTION,
 } from "@/utils/notifications";
-import { DEFAULT_POMODORO_SETTINGS, loadPomodoroSettings, savePomodoroSettings } from "@/utils/pomodoro";
 import { clearTimerState, loadTimerState, saveTimerState } from "@/utils/timerState";
-import { Audio } from "expo-av";
-import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { ImpactFeedbackStyle } from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import { formatLogDuration } from "@/utils/time";
-import { Minimize2, Settings, Share2 } from "lucide-react-native";
+import { ChevronDown, Save } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
-import { AppState, Platform, Pressable, StyleSheet, Vibration, View } from "react-native";
-import Animated, {
-  cancelAnimation,
-  Easing,
-  useAnimatedProps,
-  useSharedValue,
-  withTiming,
-} from "react-native-reanimated";
+import React, { useEffect, useRef, useState } from "react";
+import { AppState, Image, Modal, Platform, StyleSheet, Text, TextInput, TouchableOpacity, View, ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import NewCategorySheet from "@/components/sheets/NewCategorySheet";
+import AddGoalModal from "@/components/sheets/AddGoalModal";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default function TrackerPage() {
   const router = useRouter();
   const params = useLocalSearchParams<{
-    pomodoro?: string;
-    workSecs?: string;
-    shortBreakSecs?: string;
-    longBreakSecs?: string;
-    rounds?: string;
     baseTitle?: string;
     category?: string;
-    targetSecs?: string;
   }>();
 
-  const isPomodoroMode = params.pomodoro === "true";
-  const pInitialTargetSecs = parseInt(params.targetSecs || "0");
-  const pWorkSecs = parseInt(params.workSecs || "1500");
-  const pShortBreakSecs = parseInt(params.shortBreakSecs || "300");
-  const pLongBreakSecs = parseInt(params.longBreakSecs || "900");
-  const pTotalRounds = parseInt(params.rounds || "4");
-  const pBaseTitle = params.baseTitle || "";
-  const pCategory = params.category || "work";
-
-  const { currentActivity, startTracker, stopTracker, setIsMinimized, categories } =
-    useTracking();
+  const { currentActivity, activities, startTracker, stopTracker, setIsMinimized, categories, addManualActivity, deleteActivity: dbDelete, getTotalFocusTimeToday, customGoals } = useTracking();
+  const { isFaceUp, setIsSensorEnabled } = useFocusMode();
   const lastActivity = useRef(currentActivity);
   if (currentActivity) lastActivity.current = currentActivity;
   const activity = lastActivity.current;
 
   const [isPaused, setIsPaused] = useState(false);
   const [accumulatedSecs, setAccumulatedSecs] = useState(0);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const [isOvertime, setIsOvertime] = useState(false);
-  const [pomodoroWaiting, setPomodoroWaiting] = useState(false);
-  const [midRoundWaiting, setMidRoundWaiting] = useState(false);
-  const [roundDisplay, setRoundDisplay] = useState(1);
-  const [phaseDisplay, setPhaseDisplay] = useState<"work" | "break">("work");
-  const [autoNextRound, setAutoNextRound] = useState(DEFAULT_POMODORO_SETTINGS.autoNextRound);
-  const [showTimerSettings, setShowTimerSettings] = useState(false);
-  const completedAtMs = useRef<number>(0);
+  const [totalPausedMs, setTotalPausedMs] = useState(0);
+  const [showSummaryModal, setShowSummaryModal] = useState(false);
+  
+  // Summary Form State - Clear defaults so user picks at end
+  const [sessionTitle, setSessionTitle] = useState("");
+  const [sessionGoalIds, setSessionGoalIds] = useState<string[]>([]);
+  const [sessionNotes, setSessionNotes] = useState("");
+  const [showGoalPicker, setShowGoalPicker] = useState(false);
+  const [showNewCategorySheet, setShowNewCategorySheet] = useState(false);
+  const [showNewGoalSheet, setShowNewGoalSheet] = useState(false);
 
-  const hasAlerted = useRef(false);
-  const alarmSoundRef = useRef<Audio.Sound | null>(null);
+  useEffect(() => {
+    if (activity && !sessionTitle) {
+      setSessionTitle(activity.title === "Focus Session" ? "" : activity.title);
+    }
+  }, [activity?.id]);
+
   const pausedAtMs = useRef<number | null>(null);
-  const totalPausedMs = useRef(0);
-  const phaseStartMs = useRef<number>(Date.now());
-  const pendingTargetSecs = useRef<number>(0);
-  const pomodoroRound = useRef(1);
-  const pomodoroPhase = useRef<"work" | "break">("work");
-  const isCycling = useRef(false);
   const isMinimizingRef = useRef(false);
   const handleStopRef = useRef<() => void>(() => {});
   const togglePauseRef = useRef<() => void>(() => {});
-  const handleNextRoundFromNotifRef = useRef<() => void>(() => {});
 
-  const progressShared = useSharedValue(1);
+  // Auto-start is now handled by FocusModeContext ritual
+  /*
+  const hasStarted = useRef(false);
+  useEffect(() => {
+    if (!currentActivity && !hasStarted.current) {
+      hasStarted.current = true;
+      startTracker("Focus Session", "work").catch(console.error);
+    }
+  }, [currentActivity]);
+  */
 
   // ── Setup ──────────────────────────────────────────────────────────────────
-
-  useEffect(() => {
-    loadPomodoroSettings().then((s) => setAutoNextRound(s.autoNextRound));
-  }, []);
 
   useEffect(() => {
     setupTimerNotificationCategory();
@@ -107,12 +81,8 @@ export default function TrackerPage() {
 
   useEffect(() => {
     loadTimerState().then((saved) => {
-      if (!saved) { persistState(); return; }
-      pomodoroRound.current = saved.pomodoroRound;
-      pomodoroPhase.current = saved.pomodoroPhase;
-      setRoundDisplay(saved.pomodoroRound);
-      setPhaseDisplay(saved.pomodoroPhase);
-      totalPausedMs.current = saved.totalPausedMs;
+      if (!saved) { persistState(0); return; }
+      setTotalPausedMs(saved.totalPausedMs);
       if (saved.isPaused) {
         pausedAtMs.current = saved.pausedAtMs;
         setIsPaused(true);
@@ -120,10 +90,9 @@ export default function TrackerPage() {
     });
   }, []);
 
-  // Notification action listener — expo-notifications (iOS) + notifee (Android)
+  // Notification action listener
   useEffect(() => {
     if (Platform.OS === "android") {
-      // notifee foreground event handler
       const notifee = require("@notifee/react-native").default as typeof import("@notifee/react-native").default;
       const { EventType } = require("@notifee/react-native") as typeof import("@notifee/react-native");
       const unsub = notifee.onForegroundEvent(({ type, detail }) => {
@@ -131,7 +100,6 @@ export default function TrackerPage() {
         const action = detail.pressAction?.id;
         if (action === TIMER_STOP_ACTION) handleStopRef.current();
         else if (action === TIMER_PAUSE_ACTION || action === TIMER_RESUME_ACTION) togglePauseRef.current();
-        else if (action === TIMER_NEXT_ROUND_ACTION) handleNextRoundFromNotifRef.current();
       });
       return () => unsub();
     }
@@ -140,14 +108,34 @@ export default function TrackerPage() {
       const action = response.actionIdentifier;
       if (action === TIMER_STOP_ACTION) handleStopRef.current();
       else if (action === TIMER_PAUSE_ACTION || action === TIMER_RESUME_ACTION) togglePauseRef.current();
-      else if (action === TIMER_NEXT_ROUND_ACTION) handleNextRoundFromNotifRef.current();
     });
     return () => sub.remove();
   }, []);
 
   // ── Helpers ────────────────────────────────────────────────────────────────
 
-  const fmtRemaining = (secs: number) => {
+  const persistState = (newTotalPaused?: number, overrides: Partial<{
+    isPaused: boolean; pausedAtMs: number | null;
+  }> = {}) => {
+    saveTimerState({
+      params: {
+        baseTitle: params.baseTitle,
+        category: params.category,
+      },
+      pomodoroRound: 1,
+      pomodoroPhase: "work",
+      totalPausedMs: newTotalPaused ?? totalPausedMs,
+      isPaused: overrides.isPaused ?? isPaused,
+      pausedAtMs: overrides.pausedAtMs ?? pausedAtMs.current,
+    });
+  };
+
+  const buildOngoingContent = (secs: number, paused: boolean) => {
+    const pausePrefix = paused ? "⏸ " : "";
+    return { title: `${pausePrefix}${activity?.title ?? "Flowing"}`, body: formatTime(secs) };
+  };
+
+  const formatTime = (secs: number) => {
     const h = Math.floor(secs / 3600);
     const m = Math.floor((secs % 3600) / 60);
     const s = Math.floor(secs % 60);
@@ -155,69 +143,57 @@ export default function TrackerPage() {
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
 
-  const persistState = (overrides: Partial<{
-    isPaused: boolean; pausedAtMs: number | null;
-    pomodoroRound: number; pomodoroPhase: "work" | "break"; totalPausedMs: number;
-  }> = {}) => {
-    saveTimerState({
-      params: {
-        pomodoro: params.pomodoro, workSecs: params.workSecs,
-        shortBreakSecs: params.shortBreakSecs, longBreakSecs: params.longBreakSecs,
-        rounds: params.rounds, baseTitle: params.baseTitle,
-        category: params.category, targetSecs: params.targetSecs,
-      },
-      pomodoroRound: overrides.pomodoroRound ?? pomodoroRound.current,
-      pomodoroPhase: overrides.pomodoroPhase ?? pomodoroPhase.current,
-      totalPausedMs: overrides.totalPausedMs ?? totalPausedMs.current,
-      isPaused: overrides.isPaused ?? false,
-      pausedAtMs: overrides.pausedAtMs ?? null,
-    });
-  };
-
-  const buildOngoingContent = (secs: number, paused: boolean) => {
-    const phase = pomodoroPhase.current;
-    const round = pomodoroRound.current;
-    const timeStr = fmtRemaining(secs);
-    const pausePrefix = paused ? "⏸ " : "";
-    if (isPomodoroMode) {
-      const phaseLabel = phase === "work" ? `Round ${round}/${pTotalRounds}` : "Break";
-      return { title: `${pausePrefix}${pBaseTitle} · ${phaseLabel}`, body: timeStr };
-    }
-    return { title: `${pausePrefix}${activity?.title ?? ""}`, body: timeStr };
-  };
-
-  const stopAlarm = () => {
-    alarmSoundRef.current?.stopAsync().then(() => alarmSoundRef.current?.unloadAsync());
-    alarmSoundRef.current = null;
-  };
-
-  const playAlarm = async () => {
-    try {
-      await Audio.setAudioModeAsync({ playsInSilentModeIOS: true, allowsRecordingIOS: false, staysActiveInBackground: true, shouldDuckAndroid: false, playThroughEarpieceAndroid: false });
-      const { sound } = await Audio.Sound.createAsync(require("../assets/sounds/alarm-sound.mp3"), { isLooping: true });
-      alarmSoundRef.current = sound;
-      await sound.playAsync();
-    } catch (e) { console.log("Could not play sound:", e); }
-  };
-
   // ── Handlers ───────────────────────────────────────────────────────────────
 
-  const handleMinimize = () => {
-    impact(ImpactFeedbackStyle.Light);
-    isMinimizingRef.current = true;
-    router.replace("/(tabs)");
-    setIsMinimized(true);
-  };
-
-  const handleStop = () => {
-    notification(NotificationFeedbackType.Warning);
-    Vibration.cancel();
-    cancelTimerCompletionNotification();
+  const handleStop = async (isDiscard: boolean = false) => {
+    impact(ImpactFeedbackStyle.Medium);
     dismissTimerOngoingNotification();
-    dismissWaitingBannerNotification();
     clearTimerState();
-    stopAlarm();
-    if (!isCompleted) stopTracker().catch(console.error);
+    
+    try {
+      if (isDiscard && currentActivity) {
+        await dbDelete(currentActivity.id);
+      } else {
+        if (sessionGoalIds.length > 0) {
+          // Split session into multiple logs, one per goal
+          for (let i = 0; i < sessionGoalIds.length; i++) {
+            const goal = customGoals.find(g => g.id === sessionGoalIds[i]);
+            if (!goal) continue;
+            
+            const finalTitle = sessionTitle.trim() ? `${goal.name} — ${sessionTitle.trim()}` : goal.name;
+            const categoryId = goal.categoryId;
+
+            if (i === 0) {
+              // Update and stop the ongoing tracker for the first goal
+              await stopTracker({
+                title: finalTitle,
+                category: categoryId,
+                description: sessionNotes.trim() || undefined,
+              });
+            } else {
+              // Create a manual log for additional goals
+              await addManualActivity(
+                finalTitle,
+                categoryId,
+                accumulatedSecs,
+                sessionNotes.trim() || undefined,
+                new Date()
+              );
+            }
+          }
+        } else {
+          // Fallback if no goals are selected
+          await stopTracker({
+            title: sessionTitle.trim() || "Focus Session",
+            category: activity?.category || "focus",
+            description: sessionNotes.trim() || undefined,
+          });
+        }
+      }
+    } catch (e) {
+      console.error(e);
+    }
+    
     router.replace("/(tabs)");
   };
 
@@ -225,193 +201,58 @@ export default function TrackerPage() {
     impact(ImpactFeedbackStyle.Medium);
     if (!isPaused) {
       pausedAtMs.current = Date.now();
-      persistState({ isPaused: true, pausedAtMs: pausedAtMs.current });
+      setIsPaused(true);
+      persistState(totalPausedMs, { isPaused: true, pausedAtMs: pausedAtMs.current });
     } else {
       if (pausedAtMs.current !== null) {
-        totalPausedMs.current += Date.now() - pausedAtMs.current;
+        const addedPause = Date.now() - pausedAtMs.current;
+        const newTotal = totalPausedMs + addedPause;
+        setTotalPausedMs(newTotal);
         pausedAtMs.current = null;
+        setIsPaused(false);
+        persistState(newTotal, { isPaused: false, pausedAtMs: null });
+      } else {
+        setIsPaused(false);
+        persistState(totalPausedMs, { isPaused: false, pausedAtMs: null });
       }
-      persistState({ isPaused: false, pausedAtMs: null, totalPausedMs: totalPausedMs.current });
     }
-    setIsPaused((prev) => !prev);
   };
 
   useEffect(() => { handleStopRef.current = handleStop; });
   useEffect(() => { togglePauseRef.current = togglePause; });
 
-  const handlePomodoroTransition = useCallback(async () => {
-    if (isCycling.current) return;
-    isCycling.current = true;
-    cancelTimerCompletionNotification();
-    dismissTimerOngoingNotification();
-
-    const currentRound = pomodoroRound.current;
-    const currentPhase = pomodoroPhase.current;
-    const isLastRound = currentPhase === "work" && currentRound >= pTotalRounds;
-
-    setPomodoroWaiting(false);
-    phaseStartMs.current = Date.now();
-    setAccumulatedSecs(0);
-    totalPausedMs.current = 0;
-    setIsPaused(false);
-
-    await stopTracker();
-
-    if (currentPhase === "work" && isLastRound) {
-      clearTimerState();
-      isCycling.current = false;
-      router.replace("/(tabs)");
-      return;
-    }
-
-    if (currentPhase === "work") {
-      pomodoroPhase.current = "break";
-      setPhaseDisplay("break");
-      pendingTargetSecs.current = pShortBreakSecs;
-      notification(NotificationFeedbackType.Success);
-      persistState({ pomodoroPhase: "break", totalPausedMs: 0, isPaused: false, pausedAtMs: null });
-      await startTracker(`${pBaseTitle} — Short Break`, pCategory, "Pomodoro break", pShortBreakSecs);
-    } else {
-      if (pomodoroRound.current >= pTotalRounds) {
-        clearTimerState();
-        notification(NotificationFeedbackType.Success);
-        sendLocalNotification("Focus session complete! 🎉", `You finished all ${pTotalRounds} rounds. Amazing focus!`);
-        isCycling.current = false;
-        router.replace("/(tabs)");
-        return;
-      }
-      const nextRound = pomodoroRound.current + 1;
-      pomodoroRound.current = nextRound;
-      setRoundDisplay(nextRound);
-      pomodoroPhase.current = "work";
-      setPhaseDisplay("work");
-      notification(NotificationFeedbackType.Success);
-      persistState({ pomodoroRound: nextRound, pomodoroPhase: "work", totalPausedMs: 0, isPaused: false, pausedAtMs: null });
-      await startTracker(`${pBaseTitle} — Round ${nextRound}`, pCategory, "Pomodoro", pWorkSecs);
-    }
-
-    isCycling.current = false;
-  }, [pBaseTitle, pCategory, pWorkSecs, pShortBreakSecs, pTotalRounds]);
-
   // ── Notification effects ───────────────────────────────────────────────────
 
-  // Schedule completion + show ongoing on activity start
   useEffect(() => {
     if (!currentActivity) {
-      cancelTimerCompletionNotification();
       dismissTimerOngoingNotification();
       return;
     }
-    if (currentActivity.target_duration) {
-      const nowMs = Date.now();
-      const elapsedMs = Math.max(0, nowMs - currentActivity.start_time - totalPausedMs.current);
-      const remaining = Math.max(0, currentActivity.target_duration - Math.floor(elapsedMs / 1000));
-      const endMs = nowMs + remaining * 1000;
-      const isFinalRound = pomodoroPhase.current === "work" && pomodoroRound.current >= pTotalRounds;
-      if (!isPomodoroMode || isFinalRound) {
-        const completionTitle = isPomodoroMode ? "Focus session complete! 🎉" : "Time's up! ⏱";
-        const completionBody = isPomodoroMode
-          ? `You completed all ${pTotalRounds} rounds. Great focus!`
-          : `You completed "${currentActivity.title}". Great work!`;
-        scheduleTimerCompletionNotification(endMs, completionTitle, completionBody);
-      }
-      const { title, body } = buildOngoingContent(remaining, false);
-      showTimerOngoingNotification(title, body, false, undefined, endMs, true);
-    } else {
-      const effectiveStartMs = currentActivity.start_time + totalPausedMs.current;
-      const { title, body } = buildOngoingContent(0, false);
-      showTimerOngoingNotification(title, body, false, undefined, effectiveStartMs, false);
-    }
+    const { title, body } = buildOngoingContent(accumulatedSecs, isPaused);
+    const effectiveStartMs = currentActivity.start_time + (totalPausedMs || 0);
+    showTimerOngoingNotification(title, body, isPaused, undefined, effectiveStartMs, false);
+
     return () => {
       if (!isMinimizingRef.current) {
-        cancelTimerCompletionNotification();
         dismissTimerOngoingNotification();
-        dismissWaitingBannerNotification();
       }
       isMinimizingRef.current = false;
     };
-  }, [currentActivity?.id]);
-
-  // Pause/resume notification update
-  useEffect(() => {
-    if (!currentActivity) return;
-    if (isPaused) {
-      cancelTimerCompletionNotification();
-      cancelTimerCompletionNotification();
-      if (currentActivity.target_duration) {
-        const elapsed = (Date.now() - currentActivity.start_time - totalPausedMs.current) / 1000;
-        const remaining = Math.max(0, currentActivity.target_duration - elapsed);
-        const { title, body } = buildOngoingContent(remaining, true);
-        showTimerOngoingNotification(title, body, true);
-      } else {
-        const { title, body } = buildOngoingContent(accumulatedSecs, true);
-        showTimerOngoingNotification(title, body, true);
-      }
-    } else {
-      if (currentActivity.target_duration) {
-        const elapsed = (Date.now() - currentActivity.start_time - totalPausedMs.current) / 1000;
-        const remaining = Math.max(0, currentActivity.target_duration - elapsed);
-        const endMs = Date.now() + remaining * 1000;
-        const isFinalRound = pomodoroPhase.current === "work" && pomodoroRound.current >= pTotalRounds;
-        if (!isPomodoroMode || isFinalRound) {
-          const completionTitle = isPomodoroMode ? "Focus session complete! 🎉" : "Time's up! ⏱";
-          const completionBody = isPomodoroMode
-            ? `You completed all ${pTotalRounds} rounds. Great focus!`
-            : `You completed "${currentActivity.title}". Great work!`;
-          scheduleTimerCompletionNotification(endMs, completionTitle, completionBody);
-        }
-        const { title, body } = buildOngoingContent(remaining, false);
-        showTimerOngoingNotification(title, body, false, undefined, endMs, true);
-      } else {
-        const effectiveStartMs = currentActivity.start_time + totalPausedMs.current;
-        const { title, body } = buildOngoingContent(accumulatedSecs, false);
-        showTimerOngoingNotification(title, body, false, undefined, effectiveStartMs, false);
-      }
-    }
-  }, [isPaused]);
-
-  // Per-second notification update (iOS body text only — Android uses native chronometer)
-  useEffect(() => {
-    if (Platform.OS === "android") return;
-    if (isPaused || !currentActivity || hasAlerted.current) return;
-    if (currentActivity.target_duration) {
-      const remaining = Math.max(0, currentActivity.target_duration - accumulatedSecs);
-      if (remaining <= 0) return;
-      const endMs = currentActivity.start_time + currentActivity.target_duration * 1000 + totalPausedMs.current;
-      const { title, body } = buildOngoingContent(remaining, false);
-      showTimerOngoingNotification(title, body, false, undefined, endMs, true);
-    } else {
-      const effectiveStartMs = currentActivity.start_time + totalPausedMs.current;
-      const { title, body } = buildOngoingContent(accumulatedSecs, false);
-      showTimerOngoingNotification(title, body, false, undefined, effectiveStartMs, false);
-    }
-  }, [accumulatedSecs]);
+  }, [currentActivity?.id, isPaused]);
 
   // ── Timer tick ─────────────────────────────────────────────────────────────
 
   useEffect(() => {
     if (currentActivity) {
-      setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time) / 1000));
-      hasAlerted.current = false;
-      setIsOvertime(false);
+      setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time - totalPausedMs) / 1000));
     }
-  }, [currentActivity?.id]);
-
-  const justMounted = useRef(true);
-  useEffect(() => { const t = setTimeout(() => { justMounted.current = false; }, 2000); return () => clearTimeout(t); }, []);
-  useEffect(() => {
-    if (justMounted.current) return;
-    if (!currentActivity && !isCycling.current && !isPomodoroMode && !isCompleted) router.replace("/(tabs)");
-  }, [currentActivity]);
+  }, [currentActivity?.id, isPaused, totalPausedMs]);
 
   useEffect(() => {
-    if (isPaused) return;
-    const sync = currentActivity
-      ? () => { setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time - totalPausedMs.current) / 1000)); }
-      : isCycling.current
-      ? () => setAccumulatedSecs(Math.floor((Date.now() - phaseStartMs.current) / 1000))
-      : null;
-    if (!sync) return;
+    if (isPaused || !currentActivity) return;
+    const sync = () => {
+      setAccumulatedSecs(Math.floor((Date.now() - currentActivity.start_time - totalPausedMs) / 1000));
+    };
     sync();
     const interval = setInterval(sync, 1000);
     const sub = AppState.addEventListener("change", async (state) => {
@@ -423,252 +264,388 @@ export default function TrackerPage() {
           await AsyncStorage.removeItem("pending_notif_action");
           if (pending === TIMER_STOP_ACTION) handleStopRef.current();
           else if (pending === TIMER_PAUSE_ACTION || pending === TIMER_RESUME_ACTION) togglePauseRef.current();
-          else if (pending === TIMER_NEXT_ROUND_ACTION) handleNextRoundFromNotifRef.current();
         }
       }
     });
     return () => { clearInterval(interval); sub.remove(); };
-  }, [currentActivity, isPaused]);
+  }, [currentActivity, isPaused, totalPausedMs]);
 
-  // Alert when countdown hits zero
+  // ── Sensor Sync ────────────────────────────────────────────────────────────
   useEffect(() => {
-    const targetSecs = currentActivity?.target_duration;
-    if (!targetSecs || hasAlerted.current || isPaused) return;
-    if (accumulatedSecs < targetSecs) return;
-
-    hasAlerted.current = true;
-
-    if (isPomodoroMode) {
-      const isLastWorkRound = pomodoroPhase.current === "work" && pomodoroRound.current >= pTotalRounds;
-
-      if (isLastWorkRound) {
-        cancelTimerCompletionNotification();
-        dismissTimerOngoingNotification();
-        notification(NotificationFeedbackType.Success);
-        Vibration.vibrate([0, 500, 500], true);
-        showTimerOngoingNotification(`${pBaseTitle} · All done! 🎉`, "Tap to finish", false, TIMER_CATEGORY_WAITING);
-        showWaitingBannerNotification(`${pBaseTitle} · All done! 🎉`, "Tap Next Round to finish or Stop to end.");
-        handleNextRoundFromNotifRef.current = () => {
-          dismissWaitingBannerNotification();
-          Vibration.cancel();
-          stopAlarm();
-          setPomodoroWaiting(false);
-          clearTimerState();
-          stopTracker().catch(() => {});
-          router.replace("/(tabs)");
-        };
-        playAlarm();
-        setPomodoroWaiting(true);
-      } else if (autoNextRound) {
-        handlePomodoroTransition();
-      } else {
-        cancelTimerCompletionNotification();
-        dismissTimerOngoingNotification();
-        notification(NotificationFeedbackType.Success);
-        Vibration.vibrate([0, 500, 500], true);
-        const waitingBody = pomodoroPhase.current === "work"
-          ? `Round ${pomodoroRound.current}/${pTotalRounds} done — tap Next Round`
-          : "Break over — tap Next Round";
-        showTimerOngoingNotification(`${pBaseTitle} · ⏸`, waitingBody, false, TIMER_CATEGORY_WAITING);
-        showWaitingBannerNotification(`${pBaseTitle} · ⏸`, waitingBody);
-        handleNextRoundFromNotifRef.current = () => {
-          dismissWaitingBannerNotification();
-          Vibration.cancel();
-          stopAlarm();
-          setMidRoundWaiting(false);
-          handlePomodoroTransition();
-        };
-        playAlarm();
-        setMidRoundWaiting(true);
-      }
-      return;
+    if (!currentActivity) return;
+    
+    if (isFaceUp && !isPaused) {
+      togglePause(); // Auto-pause when flipped up
+    } else if (!isFaceUp && isPaused) {
+      togglePause(); // Auto-resume when flipped down
     }
-
-    // Non-pomodoro countdown complete — enter overtime (keep running, show negative)
-    cancelTimerCompletionNotification();
-    dismissTimerOngoingNotification();
-    notification(NotificationFeedbackType.Success);
-    Vibration.vibrate([0, 500, 500], true);
-    playAlarm();
-    setIsOvertime(true);
-  }, [accumulatedSecs]);
-
-  // ── Progress ring animation ────────────────────────────────────────────────
-
-  useEffect(() => {
-    if (isCompleted) {
-      progressShared.value = withTiming(1, { duration: 600, easing: Easing.out(Easing.ease) });
-      return;
-    }
-    if (isOvertime) {
-      cancelAnimation(progressShared);
-      progressShared.value = 0;
-      return;
-    }
-    if (isPaused || !currentActivity) {
-      cancelAnimation(progressShared);
-      return;
-    }
-    const elapsed = (Date.now() - currentActivity.start_time - totalPausedMs.current) / 1000;
-    if (currentActivity.target_duration) {
-      const remaining = Math.max(0, currentActivity.target_duration - elapsed);
-      progressShared.value = Math.max(0, 1 - elapsed / currentActivity.target_duration);
-      progressShared.value = withTiming(0, { duration: remaining * 1000, easing: Easing.linear });
-    } else {
-      const secInMinute = elapsed % 60;
-      progressShared.value = 1 - secInMinute / 60;
-      progressShared.value = withTiming(0, { duration: (60 - secInMinute) * 1000, easing: Easing.linear });
-    }
-  }, [currentActivity?.id, currentActivity?.start_time, isPaused, isCompleted, isOvertime]);
-
-  const animatedProps = useAnimatedProps(() => ({
-    strokeDashoffset: CIRCUMFERENCE * (1 - progressShared.value),
-  }));
+  }, [isFaceUp]);
 
   // ── Derived display values ─────────────────────────────────────────────────
   const { colorScheme } = useColorScheme();
   const { accentColor } = useAppTheme();
   const isDark = colorScheme === "dark";
-  const targetSecs = currentActivity
-    ? (activity?.target_duration || 0)
-    : isCycling.current ? pendingTargetSecs.current : (activity?.target_duration || pInitialTargetSecs || 0);
-  const isCountdown = targetSecs > 0;
-  const currentCategory = categories.find((c) => c.id === activity?.category);
-  const displayTitle = isPomodoroMode ? pBaseTitle : (activity?.title ?? "");
-  const ringColor = isPomodoroMode
-    ? phaseDisplay === "break" ? "#14b8a6" : getContrastingColor(accentColor, isDark)
-    : isOvertime ? "#ef4444" : getContrastingColor(accentColor, isDark);
-
-  let displayTime = "";
-  if (isCountdown) {
-    const raw = targetSecs - accumulatedSecs;
-    if (raw < 0) {
-      const over = -raw;
-      const h = Math.floor(over / 3600);
-      const m = Math.floor((over % 3600) / 60);
-      const s = over % 60;
-      displayTime = h > 0
-        ? `-${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-        : `-${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    } else {
-      const h = Math.floor(raw / 3600);
-      const m = Math.floor((raw % 3600) / 60);
-      const s = raw % 60;
-      displayTime = h > 0
-        ? `${h}:${(m % 60).toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-        : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-    }
-  } else {
-    const h = Math.floor(accumulatedSecs / 3600);
-    const m = Math.floor((accumulatedSecs % 3600) / 60);
-    const s = accumulatedSecs % 60;
-    displayTime = h > 0
-      ? `${h}:${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`
-      : `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
-  }
-
+  const displayTitle = activity?.title ?? "Session";
+  const ringColor = getContrastingColor(accentColor, isDark);
+  const displayTime = formatTime(accumulatedSecs);
   const bg = isDark ? "#121212" : "#fff";
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: bg }]}>
-      <View style={[styles.header, !isPomodoroMode && { justifyContent: "flex-end" }]}>
-        {isPomodoroMode && (
-          <Pressable onPress={() => setShowTimerSettings(true)} style={styles.headerBtn}>
-            <Settings size={22} color={isDark ? "rgba(255,255,255,0.4)" : "rgba(0,0,0,0.4)"} />
-          </Pressable>
-        )}
-      </View>
-
-      <TimerSettingsModal
-        visible={showTimerSettings}
-        isDark={isDark}
-        autoNextRound={autoNextRound}
-        ringColor={ringColor}
-        onClose={() => setShowTimerSettings(false)}
-        onAutoNextRoundChange={(val) => {
-          setAutoNextRound(val);
-          loadPomodoroSettings().then((s) => savePomodoroSettings({ ...s, autoNextRound: val }));
-        }}
-      />
-
       <View style={styles.content}>
-        <TimerRing
-          isDark={isDark}
-          displayTime={displayTime}
-          displayTitle={displayTitle}
-          ringColor={ringColor}
-          isPomodoroMode={isPomodoroMode}
-          phaseDisplay={phaseDisplay}
-          roundDisplay={roundDisplay}
-          pTotalRounds={pTotalRounds}
-          currentCategory={currentCategory}
-          animatedProps={animatedProps}
-        />
+        <View style={styles.mascotContainer}>
+          <Image 
+            source={getTotalFocusTimeToday() > 240 
+              ? require("@/assets/images/sleepy flow.png")
+              : require("@/assets/images/focus flow.png")
+            }
+            style={styles.mascotImage}
+            resizeMode="contain"
+          />
+        </View>
+
+        <View style={styles.timerContainer}>
+          <Text style={[styles.categoryText, { color: ringColor, opacity: 0.6 }]}>
+            {categories.find(c => c.id === activity?.category)?.label?.toUpperCase() ?? "FOCUS"}
+          </Text>
+          <Text style={[styles.timeText, { color: isDark ? "#fff" : "#121212" }]}>
+            {displayTime}
+          </Text>
+          <Text style={[styles.titleText, { color: isDark ? "rgba(255,255,255,0.5)" : "rgba(0,0,0,0.5)" }]}>
+            {displayTitle}
+          </Text>
+        </View>
 
         <TimerControls
           isDark={isDark}
           ringColor={ringColor}
-          isPomodoroMode={isPomodoroMode}
           isPaused={isPaused}
-          isCompleted={isCompleted}
-          pomodoroWaiting={pomodoroWaiting}
-          midRoundWaiting={midRoundWaiting}
           onTogglePause={togglePause}
-          onStop={handleStop}
-          onNextRound={() => {
-            impact(ImpactFeedbackStyle.Medium);
-            stopAlarm();
-            setMidRoundWaiting(false);
-            handlePomodoroTransition();
-          }}
-          onFinish={() => {
-            impact(ImpactFeedbackStyle.Medium);
-            Vibration.cancel();
-            stopAlarm();
-            if (isPomodoroMode && pomodoroWaiting) {
-              stopTracker().catch(() => {});
-            }
-            router.replace("/(tabs)");
-          }}
-          onShare={() => {
-            impact(ImpactFeedbackStyle.Light);
-            router.push({
-              pathname: "/share-session",
-              params: {
-                title: isPomodoroMode ? pBaseTitle : (activity?.title ?? ""),
-                duration: formatLogDuration(
-                  activity?.start_time ?? Date.now() - accumulatedSecs * 1000,
-                  completedAtMs.current || null,
-                  null,
-                ),
-                dateLabel: new Date(activity?.start_time ?? Date.now()).toLocaleString(undefined, {
-                  weekday: "short", month: "short", day: "numeric",
-                  hour: "numeric", minute: "2-digit",
-                }),
-                category: currentCategory ? JSON.stringify(currentCategory) : undefined,
-              },
-            });
-          }}
+          onStop={() => setShowSummaryModal(true)}
+          // Legacy props
+          isPomodoroMode={false}
+          isCompleted={false}
+          pomodoroWaiting={false}
+          midRoundWaiting={false}
+          onNextRound={() => {}}
+          onFinish={() => setShowSummaryModal(true)}
         />
       </View>
+
+      {/* Face-Up Warning Overlay */}
+      {isFaceUp && currentActivity && !showSummaryModal && isPaused && (
+        <View style={StyleSheet.absoluteFill} className="bg-black/80 items-center justify-center px-10 z-[100]">
+          <Image 
+            source={require("../assets/images/phone flow.png")}
+            style={{ width: 120, height: 120, marginBottom: 20 }}
+            resizeMode="contain"
+          />
+          <Text className="text-white text-2xl font-black text-center mb-2">ARE YOU DONE?</Text>
+          <Text className="text-gray-400 text-center mb-8 font-bold">Flip the phone back down to continue focusing, or tap below to finish.</Text>
+          
+          <TouchableOpacity 
+            onPress={() => { impact(ImpactFeedbackStyle.Medium); setShowSummaryModal(true); }}
+            style={{ 
+              backgroundColor: accentColor === "#FFFFFF" ? "transparent" : accentColor,
+              overflow: 'hidden'
+            }}
+            className="w-full h-[96px] rounded-full items-center justify-center mb-4"
+          >
+            {accentColor === "#FFFFFF" ? (
+              <LinearGradient
+                colors={["#FFFFFF", "#CBD5E1"]}
+                style={StyleSheet.absoluteFill}
+                className="items-center justify-center"
+              >
+                <Text className="text-klowk-black font-black uppercase tracking-[2px]">YES, I'M DONE</Text>
+              </LinearGradient>
+            ) : (
+              <Text className="text-white font-black uppercase tracking-[2px]">YES, I'M DONE</Text>
+            )}
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {/* Summary Modal */}
+      <Modal
+        visible={showSummaryModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setShowSummaryModal(false)}
+      >
+        <TouchableOpacity 
+          activeOpacity={1} 
+          onPress={() => setShowSummaryModal(false)}
+          className="flex-1 bg-black/60 justify-end"
+        >
+          <TouchableOpacity 
+            activeOpacity={1} 
+            onPress={(e) => e.stopPropagation()} 
+            className="bg-white dark:bg-[#1A1A1A] rounded-t-[40px] p-8 pb-12"
+          >
+            <View className="items-center mb-6">
+              <View className="w-12 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+            </View>
+            
+            <Text className="text-2xl font-black text-klowk-black dark:text-white mb-6">Session Summary</Text>
+            
+            <View className="space-y-6">
+              <View>
+                <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-2">TITLE</Text>
+                <TextInput
+                  value={sessionTitle}
+                  onChangeText={setSessionTitle}
+                  placeholder="What were you doing?"
+                  placeholderTextColor="#666"
+                  className="bg-gray-100 dark:bg-black/40 p-5 rounded-2xl text-klowk-black dark:text-white font-bold"
+                />
+              </View>
+
+
+              <View className="mt-2">
+                <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-3 ml-1">TARGET GOAL</Text>
+                <TouchableOpacity 
+                  onPress={() => setShowGoalPicker(true)}
+                  className="bg-gray-100 dark:bg-black/40 p-4 rounded-[24px] flex-row items-center justify-between border border-gray-200 dark:border-zinc-800"
+                  style={sessionGoalIds.length > 0 ? { borderColor: accentColor + "40", backgroundColor: accentColor + "10" } : {}}
+                >
+                  <View className="flex-row items-center">
+                    <View 
+                      style={{ backgroundColor: sessionGoalIds.length > 0 ? accentColor + "20" : "rgba(128,128,128,0.1)" }}
+                      className="w-14 h-14 rounded-2xl items-center justify-center mr-4"
+                    >
+                      <View style={{ transform: [{ rotate: "45deg" }] }}>
+                        <CategoryIcon 
+                          name="target" 
+                          size={24} 
+                          color={sessionGoalIds.length > 0 ? accentColor : "#666"} 
+                        />
+                      </View>
+                    </View>
+                    <View className="flex-1 pr-4">
+                      <Text 
+                        style={{ color: sessionGoalIds.length > 0 ? accentColor : (isDark ? "#fff" : "#000") }}
+                        className="text-lg font-black"
+                        numberOfLines={1}
+                      >
+                        {sessionGoalIds.length === 0 
+                          ? "No Goal Selected" 
+                          : sessionGoalIds.length === 1 
+                            ? customGoals.find(g => g.id === sessionGoalIds[0])?.name 
+                            : `${sessionGoalIds.length} Goals Selected`}
+                      </Text>
+                      {sessionGoalIds.length > 0 && (
+                        <Text className="text-gray-400 text-xs font-bold mt-0.5" numberOfLines={1}>
+                          {sessionGoalIds.map(id => customGoals.find(g => g.id === id)?.name).join(", ")}
+                        </Text>
+                      )}
+                    </View>
+                  </View>
+                  <ChevronDown size={20} color={sessionGoalIds.length > 0 ? accentColor : "#666"} />
+                </TouchableOpacity>
+                
+                {/* Goal Bottom Sheet */}
+                <Modal
+                  visible={showGoalPicker}
+                  animationType="slide"
+                  transparent={true}
+                  onRequestClose={() => setShowGoalPicker(false)}
+                >
+                  <TouchableOpacity 
+                    activeOpacity={1} 
+                    onPress={() => setShowGoalPicker(false)}
+                    className="flex-1 bg-black/60 justify-end"
+                  >
+                    <View className="bg-white dark:bg-[#1A1A1A] rounded-t-[40px] p-8 pb-12 max-h-[80%]">
+                      <View className="items-center mb-6">
+                        <View className="w-12 h-1 bg-gray-300 dark:bg-gray-700 rounded-full" />
+                      </View>
+                      
+                      <View className="flex-row justify-between items-center mb-6">
+                        <Text className="text-xl font-black text-klowk-black dark:text-white">Select Goals</Text>
+                        <View className="flex-row gap-2">
+                          <TouchableOpacity 
+                            onPress={() => setShowNewGoalSheet(true)}
+                            style={{ backgroundColor: accentColor + "15" }}
+                            className="px-4 py-2 rounded-full flex-row items-center border border-accent/20"
+                          >
+                            <Text style={{ color: accentColor }} className="font-black text-xs uppercase tracking-tighter">+ New</Text>
+                          </TouchableOpacity>
+                          <TouchableOpacity 
+                            onPress={() => setShowGoalPicker(false)}
+                            style={{ backgroundColor: accentColor }}
+                            className="px-6 py-2 rounded-full flex-row items-center"
+                          >
+                            <Text className="text-white font-black text-xs uppercase tracking-tighter">Done</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </View>
+
+                      <ScrollView showsVerticalScrollIndicator={false}>
+                        <View className="gap-2">
+                          <TouchableOpacity
+                            onPress={() => setSessionGoalIds([])}
+                            style={{ 
+                              backgroundColor: sessionGoalIds.length === 0 ? accentColor + "20" : (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"),
+                              borderColor: sessionGoalIds.length === 0 ? accentColor : "transparent",
+                              borderWidth: 1
+                            }}
+                            className="p-5 rounded-[22px] flex-row items-center justify-between"
+                          >
+                            <Text style={{ color: sessionGoalIds.length === 0 ? accentColor : (isDark ? "#fff" : "#000") }} className="font-black text-base">No Goals</Text>
+                          </TouchableOpacity>
+
+                          {customGoals.map(goal => {
+                            const isSelected = sessionGoalIds.includes(goal.id);
+                            return (
+                              <TouchableOpacity
+                                key={goal.id}
+                                onPress={() => { 
+                                  setSessionGoalIds(prev => 
+                                    isSelected ? prev.filter(id => id !== goal.id) : [...prev, goal.id]
+                                  );
+                                  if (!sessionTitle.trim() && !isSelected) setSessionTitle(goal.name);
+                                }}
+                                style={{ 
+                                  backgroundColor: isSelected ? accentColor + "20" : (isDark ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.02)"),
+                                  borderColor: isSelected ? accentColor : "transparent",
+                                  borderWidth: 1
+                                }}
+                                className="p-5 rounded-[22px] flex-row items-center justify-between"
+                              >
+                                <View>
+                                  <Text style={{ color: isSelected ? accentColor : (isDark ? "#fff" : "#000") }} className="font-black text-base">{goal.name}</Text>
+                                  <Text className="text-gray-400 text-xs font-bold mt-1">
+                                    {Math.floor(goal.targetMins / 60)}h {goal.targetMins % 60}m target
+                                  </Text>
+                                </View>
+                                {isSelected && (
+                                  <View style={{ backgroundColor: accentColor }} className="w-6 h-6 rounded-full items-center justify-center">
+                                    <View className="w-3 h-3 border-b-2 border-r-2 border-white rotate-45 mb-1" />
+                                  </View>
+                                )}
+                              </TouchableOpacity>
+                            );
+                          })}
+                        </View>
+                      </ScrollView>
+                    </View>
+                  </TouchableOpacity>
+                </Modal>
+              </View>
+
+              <View>
+                <Text className="text-gray-400 font-bold uppercase text-[10px] tracking-widest mb-2">NOTES</Text>
+                <TextInput
+                  value={sessionNotes}
+                  onChangeText={setSessionNotes}
+                  placeholder="Add details..."
+                  placeholderTextColor="#666"
+                  multiline
+                  numberOfLines={3}
+                  className="bg-gray-100 dark:bg-black/40 p-5 rounded-2xl text-klowk-black dark:text-white font-bold"
+                />
+              </View>
+            </View>
+
+            <View className="flex-row mt-10 gap-3">
+              <TouchableOpacity 
+                onPress={() => {
+                  handleStop(true);
+                }}
+                className="flex-1 bg-gray-100 dark:bg-white/5 p-6 rounded-3xl items-center justify-center"
+              >
+                <Text className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-widest text-xs">Discard</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                disabled={!sessionTitle.trim() && sessionGoalIds.length === 0}
+                onPress={async () => {
+                  impact(ImpactFeedbackStyle.Heavy);
+                  handleStop(false);
+                }}
+                style={{ 
+                  backgroundColor: (!sessionTitle.trim() && sessionGoalIds.length === 0) 
+                    ? (isDark ? "#2A2A2A" : "#F3F4F6") 
+                    : (accentColor === "#FFFFFF" ? "transparent" : accentColor),
+                  overflow: 'hidden'
+                }}
+                className="flex-[2] h-[80px] rounded-3xl items-center justify-center"
+              >
+                {(!sessionTitle.trim() && sessionGoalIds.length === 0) ? (
+                  <View className="flex-row items-center justify-center">
+                    <Save size={18} color="#666" />
+                    <Text className="text-[#666] font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
+                  </View>
+                ) : accentColor === "#FFFFFF" ? (
+                  <LinearGradient
+                    colors={["#FFFFFF", "#CBD5E1"]}
+                    style={StyleSheet.absoluteFill}
+                    className="flex-row items-center justify-center"
+                  >
+                    <Save size={18} color="#121212" />
+                    <Text className="text-klowk-black font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
+                  </LinearGradient>
+                ) : (
+                  <View className="flex-row items-center justify-center">
+                    <Save size={18} color="white" />
+                    <Text className="text-white font-black uppercase tracking-widest ml-2 text-sm">Save & Finish</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+      <NewCategorySheet 
+        visible={showNewCategorySheet}
+        onClose={() => setShowNewCategorySheet(false)}
+        onCreated={() => {
+          setShowGoalPicker(false);
+        }}
+      />
+      <AddGoalModal 
+        visible={showNewGoalSheet}
+        onClose={() => setShowNewGoalSheet(false)}
+      />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 24,
-    paddingTop: 12,
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-  },
-  headerBtn: { padding: 10 },
   content: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
     paddingBottom: 60,
+  },
+  timerContainer: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  timeText: {
+    fontSize: 84,
+    fontWeight: "300",
+    fontVariant: ["tabular-nums"],
+    letterSpacing: -2,
+    marginVertical: 10,
+  },
+  categoryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    letterSpacing: 3,
+  },
+  mascotContainer: {
+    marginBottom: 32,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.3,
+    shadowRadius: 30,
+    elevation: 20,
+  },
+  mascotImage: {
+    width: 180,
+    height: 180,
   },
 });

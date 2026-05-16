@@ -20,9 +20,13 @@ export function getHapticsEnabled() {
 }
 
 export function impact(style: Haptics.ImpactFeedbackStyle) {
-  if (_enabled) Haptics.impactAsync(style);
+  if (_enabled) {
+    Haptics.impactAsync(style).catch(() => {});
+  }
 }
 
 export function notification(type: Haptics.NotificationFeedbackType) {
-  if (_enabled) Haptics.notificationAsync(type);
+  if (_enabled) {
+    Haptics.notificationAsync(type).catch(() => {});
+  }
 }

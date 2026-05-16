@@ -31,7 +31,7 @@ export default function GoalScreen() {
   const [goalHours, setGoalHours] = useState(4);
   const handleNext = () => {
     notification(NotificationFeedbackType.Success);
-    router.push("/onboarding/test-log");
+    router.push("/onboarding/notifications");
     setDailyGoalHours(goalHours);
   };
 
@@ -114,10 +114,10 @@ export default function GoalScreen() {
           <Pressable
             onPress={handleNext}
             style={{ backgroundColor: accentColor }}
-            className="w-full py-4 px-6 rounded-[20px] items-center justify-center"
+            className="w-full py-12 rounded-full items-center justify-center"
           >
-            <Text className="text-base font-black text-white uppercase tracking-wider">
-              Next → Let's Test
+            <Text className="text-lg font-black text-white uppercase tracking-[2px]">
+              Next → Let's Finish
             </Text>
           </Pressable>
         </View>

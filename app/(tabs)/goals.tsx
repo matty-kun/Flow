@@ -42,6 +42,7 @@ import {
   View
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import AddGoalModal from "@/components/sheets/AddGoalModal";
 
 function ConfettiOverlay({ visible }: { visible: boolean }) {
   const { accentColor } = useAppTheme();
@@ -127,66 +128,12 @@ export default function GoalsScreen() {
   // Modal State
   const [showAddModal, setShowAddModal] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
+  const [selectedActionGoalId, setSelectedActionGoalId] = useState<string | null>(null);
 
-  const [goalName, setGoalName] = useState("");
-  const [targetHours, setTargetHours] = useState(0);
-  const [targetMinutes, setTargetMinutes] = useState(0);
-  const [selectedCatId, setSelectedCatId] = useState<string>("");
-  const scrollRef = useRef<ScrollView>(null);
-  const [sheetScrollEnabled, setSheetScrollEnabled] = useState(true);
-  const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
-  const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
-  const [startDate, setStartDate] = useState(new Date());
-
-  const initialEndDate = new Date();
-  initialEndDate.setDate(initialEndDate.getDate() + 7);
-  const [endDate, setEndDate] = useState(initialEndDate);
-
-  // Calendar State
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [activeDateType, setActiveDateType] = useState<"start" | "end" | null>(
-    null,
-  );
-  // Action Sheet State
-  const [selectedActionGoalId, setSelectedActionGoalId] = useState<
-    string | null
-  >(null);
-
-  const sheetSlide = useRef(new Animated.Value(800)).current;
-  const sheetBackdrop = useRef(new Animated.Value(0)).current;
-  const keyboardOffset = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const show = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillShow" : "keyboardDidShow",
-      (e) => {
-        Animated.timing(keyboardOffset, {
-          toValue: e.endCoordinates.height,
-          duration: Platform.OS === "ios" ? e.duration : 200,
-          useNativeDriver: false,
-        }).start();
-      }
-    );
-    const hide = Keyboard.addListener(
-      Platform.OS === "ios" ? "keyboardWillHide" : "keyboardDidHide",
-      (e) => {
-        Animated.timing(keyboardOffset, {
-          toValue: 0,
-          duration: Platform.OS === "ios" ? e.duration : 200,
-          useNativeDriver: false,
-        }).start();
-      }
-    );
-    return () => { show.remove(); hide.remove(); };
-  }, [keyboardOffset]);
 
   // Auto-select first category if available
-  useEffect(() => {
-    if (categories.length > 0 && !selectedCatId) {
-      setSelectedCatId(categories[0].id);
-    }
-  }, [categories, selectedCatId]);
+
 
   // Helpers
   const formatHrs = (mins: number) => (mins / 60).toFixed(1).replace(".0", "");
@@ -194,85 +141,19 @@ export default function GoalsScreen() {
   const openSheet = (existingGoal?: CustomGoal) => {
     if (existingGoal) {
       setEditId(existingGoal.id);
-      setGoalName(existingGoal.name);
-      setTargetHours(Math.floor(existingGoal.targetMins / 60));
-      setTargetMinutes(existingGoal.targetMins % 60);
-      setSelectedCatId(existingGoal.categoryId);
-      setStartDate(new Date(existingGoal.startDate));
-      setEndDate(new Date(existingGoal.endDate));
     } else {
       setEditId(null);
-      setGoalName("");
-      setTargetHours(0);
-      setTargetMinutes(0);
-      setStartDate(new Date());
-      const endD = new Date();
-      endD.setDate(endD.getDate() + 7);
-      setEndDate(endD);
     }
-
     setShowAddModal(true);
-    Animated.parallel([
-      Animated.timing(sheetBackdrop, {
-        toValue: 1,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-      Animated.spring(sheetSlide, {
-        toValue: 0,
-        tension: 40,
-        friction: 9,
-        useNativeDriver: true,
-      }),
-    ]).start();
   };
 
   const closeSheet = () => {
-    Animated.parallel([
-      Animated.timing(sheetBackdrop, {
-        toValue: 0,
-        duration: 180,
-        useNativeDriver: true,
-      }),
-      Animated.timing(sheetSlide, {
-        toValue: 800,
-        duration: 220,
-        useNativeDriver: true,
-      }),
-    ]).start(() => {
-      setShowAddModal(false);
-    });
+    setShowAddModal(false);
+    setEditId(null);
   };
 
   const handleSaveGoal = () => {
-    const targetMinsCalc = targetHours * 60 + targetMinutes;
-    if (!goalName.trim() || targetMinsCalc <= 0 || !selectedCatId) return;
-
-    // ensure end time is end of day
-    const fixedEnd = new Date(endDate);
-    fixedEnd.setHours(23, 59, 59, 999);
-
-    if (editId) {
-      editCustomGoal({
-        id: editId,
-        name: goalName.trim(),
-        targetMins: targetMinsCalc,
-        categoryId: selectedCatId,
-        startDate: startDate.getTime(),
-        endDate: fixedEnd.getTime(),
-      });
-    } else {
-      addCustomGoal({
-        id: Date.now().toString(),
-        name: goalName.trim(),
-        targetMins: targetMinsCalc,
-        categoryId: selectedCatId,
-        startDate: startDate.getTime(),
-        endDate: fixedEnd.getTime(),
-      });
-    }
-
-    notification(NotificationFeedbackType.Success);
+    // This is now handled inside AddGoalModal
     closeSheet();
   };
 
@@ -286,7 +167,7 @@ const now = Date.now();
     for (const goal of customGoals) {
       const secs = activities
         .filter((a: Activity) =>
-          (a.title === goal.name || (a.title.startsWith(goal.name + " —") && !a.title.endsWith(" — Short Break") && !a.title.endsWith(" — Long Break"))) &&
+          (a.title === goal.name || a.title.includes(`[${goal.name}]`) || (a.title.startsWith(goal.name + " —") && !a.title.endsWith(" — Short Break") && !a.title.endsWith(" — Long Break"))) &&
           a.category === goal.categoryId &&
           a.duration != null &&
           a.start_time >= goal.startDate &&
@@ -386,7 +267,10 @@ const now = Date.now();
         />
 
         <ConfettiOverlay visible={showConfetti} />
-        {renderAddGoalModal()}
+        <AddGoalModal 
+          visible={showAddModal} 
+          onClose={closeSheet} 
+        />
       </SafeAreaView>
     );
   }
@@ -397,7 +281,7 @@ const now = Date.now();
       <ScrollView className="flex-1 px-6" showsVerticalScrollIndicator={false}>
         <View className="flex-row items-center justify-between mb-6 mt-8">
           <Text className="text-4xl font-black text-[#121212] dark:text-white">
-            {t("goals")}
+            Goals
           </Text>
           <Pressable
             onPress={() => {
@@ -414,12 +298,19 @@ const now = Date.now();
 {/* Active Goals List */}
         {ongoingGoals.length > 0 && (
           <>
-            <SectionHeader label={t("active_objectives")} />
+            <SectionHeader label="Your Goals" />
             <View className="gap-4">
               {ongoingGoals.map((goal, idx) => {
                 const catData = categories.find((c: Category) => c.id === goal.categoryId);
                 if (!catData) return null;
                 const currentSecs = goalLoggedSecs.get(goal.id) || 0;
+                
+                // Find the last exit note for this goal
+                const lastActivityWithNote = activities
+                  .filter(a => (a.title === goal.name || a.title.includes(`[${goal.name}]`) || a.title.startsWith(goal.name + " —")) && a.category === goal.categoryId && a.description)
+                  .sort((a, b) => b.start_time - a.start_time)[0];
+                const lastNote = lastActivityWithNote?.description || undefined;
+
                 return (
                   <GoalCard
                     key={goal.id}
@@ -429,6 +320,7 @@ const now = Date.now();
                     index={idx}
                     isRecentlyActive={recentlyActiveGoalIds.has(goal.id)}
                     onPressMore={() => setSelectedActionGoalId(goal.id)}
+                    lastNote={lastNote}
                   />
                 );
               })}
@@ -515,7 +407,7 @@ const now = Date.now();
                         {goal.name}
                       </Text>
                       <Text className="text-[10px] font-bold text-gray-400 dark:text-zinc-500 mt-0.5">
-                        {loggedHrs} of {targetHrsVal} ·{new Date(goal.endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                        {loggedHrs} of {targetHrsVal}
                       </Text>
                     </View>
                     <View className={`px-2 py-1 rounded-full ${achieved ? "bg-emerald-100 dark:bg-emerald-900/40" : "bg-red-100 dark:bg-red-900/40"}`}>
@@ -566,364 +458,11 @@ const now = Date.now();
         ]}
       />
 
-      {renderAddGoalModal()}
+      <AddGoalModal 
+        visible={showAddModal} 
+        onClose={closeSheet} 
+        editingGoalId={editId}
+      />
     </SafeAreaView>
   );
-
-  function renderAddGoalModal() {
-    const isFormValid =
-      goalName.trim() &&
-      (targetHours * 60 + targetMinutes) > 0 &&
-      selectedCatId;
-
-    return (
-      <Modal
-        visible={showAddModal}
-        transparent
-        animationType="none"
-        onRequestClose={closeSheet}
-      >
-        <View style={{ flex: 1 }}>
-          <Animated.View
-            style={{
-              flex: 1,
-              justifyContent: "flex-end",
-              backgroundColor: "rgba(0,0,0,0.6)",
-              opacity: sheetBackdrop,
-            }}
-          >
-            <Pressable style={{ flex: 1 }} onPress={closeSheet} />
-            <Animated.View style={{ marginBottom: keyboardOffset }}>
-            <Animated.View style={{ transform: [{ translateY: sheetSlide }] }}>
-              <Pressable
-                onPress={(e) => e.stopPropagation()}
-                style={{
-                  backgroundColor: isDark ? "#1C1C1E" : "#fff",
-                  borderTopLeftRadius: 40,
-                  borderTopRightRadius: 40,
-                  height: height * 0.9,
-                }}
-              >
-                <ScrollView
-                  ref={scrollRef}
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ padding: 32, paddingBottom: 120 }}
-                  showsVerticalScrollIndicator={false}
-                  bounces={false}
-                  scrollEnabled={sheetScrollEnabled}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="on-drag"
-                  nestedScrollEnabled
-                >
-                  {/* Sheet header */}
-                  <View
-                    style={{
-                      flexDirection: "row",
-                      justifyContent: "space-between",
-                      alignItems: "center",
-                      marginBottom: 28,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 24,
-                        fontWeight: "900",
-                        color: isDark ? "#fff" : "#121212",
-                      }}
-                    >
-                      {editId ? t("edit_goal") : t("new_goal")}
-                    </Text>
-                    <Pressable
-                      onPress={closeSheet}
-                      style={{
-                        width: 36,
-                        height: 36,
-                        borderRadius: 18,
-                        backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6",
-                        alignItems: "center",
-                        justifyContent: "center",
-                      }}
-                    >
-                      <X size={18} color={isDark ? "#fff" : "#121212"} />
-                    </Pressable>
-                  </View>
-
-                  {/* Goal Name Input */}
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "900",
-                      color: isDark ? "#71717a" : "#9ca3af",
-                      textTransform: "uppercase",
-                      letterSpacing: 2,
-                      marginBottom: 12,
-                    }}
-                  >
-                    {t("goal_name")}
-                  </Text>
-                  <View
-                    style={{
-                      backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
-                      marginBottom: 24,
-                    }}
-                  >
-                    <TextInput
-                      value={goalName}
-                      onChangeText={setGoalName}
-                      placeholder="e.g. Feed Flow"
-                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
-                      style={{
-                        padding: 18,
-                        fontSize: 16,
-                        fontWeight: "700",
-                        color: isDark ? "#fff" : "#121212",
-                      }}
-                    />
-                  </View>
-
-                  {/* Select Category */}
-                  <Text
-                    style={{
-                      fontSize: 11,
-                      fontWeight: "900",
-                      color: isDark ? "#71717a" : "#9ca3af",
-                      textTransform: "uppercase",
-                      letterSpacing: 2,
-                      marginBottom: 12,
-                    }}
-                  >
-                    {t("category_label")}
-                  </Text>
-                  <View style={{ marginBottom: 24 }}>
-                    <CategoryCardPicker
-                      categories={categories}
-                      selectedId={selectedCatId}
-                      onSelect={setSelectedCatId}
-                      activities={activities}
-                    />
-                  </View>
-
-                  {/* Target Input */}
-                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
-                    Target
-                  </Text>
-                  <View
-                    onTouchStart={() => setSheetScrollEnabled(false)}
-                    onTouchEnd={() => setSheetScrollEnabled(true)}
-                    onTouchCancel={() => setSheetScrollEnabled(true)}
-                    style={{
-                      backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
-                      marginBottom: 24,
-                      flexDirection: "row",
-                      paddingVertical: 12,
-                      paddingHorizontal: 8,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <WheelPicker
-                        values={hourValues}
-                        selectedIndex={targetHours}
-                        onChange={setTargetHours}
-                        itemHeight={32}
-                        visibleItems={3}
-                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
-                      />
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>hrs</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <WheelPicker
-                        values={minValues}
-                        selectedIndex={targetMinutes}
-                        onChange={setTargetMinutes}
-                        itemHeight={32}
-                        visibleItems={3}
-                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
-                      />
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>min</Text>
-                    </View>
-                  </View>
-
-                  {/* Date Range Row */}
-                  <View
-                    style={{ flexDirection: "row", gap: 16, marginBottom: 32 }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "900",
-                          color: isDark ? "#71717a" : "#9ca3af",
-                          textTransform: "uppercase",
-                          letterSpacing: 2,
-                          marginBottom: 12,
-                        }}
-                      >
-                        Start Date
-                      </Text>
-                      <Pressable
-                        onPress={() => {
-                          setActiveDateType("start");
-                          setShowDatePicker(true);
-                          impact(ImpactFeedbackStyle.Light);
-                        }}
-                        style={{
-                          backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
-                          flexDirection: "row",
-                          alignItems: "center",
-                          height: 50,
-                          paddingHorizontal: 14,
-                        }}
-                      >
-                        <CalendarIcon
-                          size={14}
-                          color={isDark ? "#52525b" : "#9ca3af"}
-                        />
-                        <Text
-                          style={{
-                            flex: 1,
-                            marginLeft: 10,
-                            fontSize: 14,
-                            fontWeight: "700",
-                            color: isDark ? "#fff" : "#121212",
-                          }}
-                        >
-                          {startDate.toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </Text>
-                      </Pressable>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={{
-                          fontSize: 11,
-                          fontWeight: "900",
-                          color: isDark ? "#71717a" : "#9ca3af",
-                          textTransform: "uppercase",
-                          letterSpacing: 2,
-                          marginBottom: 12,
-                        }}
-                      >
-                        End Date
-                      </Text>
-                      <Pressable
-                        onPress={() => {
-                          setActiveDateType("end");
-                          setShowDatePicker(true);
-                          impact(ImpactFeedbackStyle.Light);
-                        }}
-                        style={{
-                          backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
-                          borderRadius: 20,
-                          borderWidth: 1,
-                          borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
-                          flexDirection: "row",
-                          alignItems: "center",
-                          height: 50,
-                          paddingHorizontal: 14,
-                        }}
-                      >
-                        <CalendarIcon
-                          size={14}
-                          color={isDark ? "#52525b" : "#9ca3af"}
-                        />
-                        <Text
-                          style={{
-                            flex: 1,
-                            marginLeft: 10,
-                            fontSize: 14,
-                            fontWeight: "700",
-                            color: isDark ? "#fff" : "#121212",
-                          }}
-                        >
-                          {endDate.toLocaleDateString(undefined, {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          })}
-                        </Text>
-                      </Pressable>
-                    </View>
-                  </View>
-                </ScrollView>
-
-                <View
-                  pointerEvents="box-none"
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    right: 0,
-                    bottom: 20,
-                    alignItems: "center",
-                    paddingHorizontal: 28,
-                  }}
-                >
-                  <Pressable
-                    onPress={handleSaveGoal}
-                    disabled={!isFormValid}
-                    style={{
-                      width: "100%",
-                      maxWidth: 340,
-                      paddingVertical: 16,
-                      borderRadius: 24,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: !isFormValid
-                        ? isDark
-                          ? accentColor + "26"
-                          : "#f3f4f6"
-                        : getContrastingColor(accentColor, isDark),
-                      shadowColor: "#000",
-                      shadowOffset: { width: 0, height: 8 },
-                      shadowOpacity: isDark ? 0.45 : 0.18,
-                      shadowRadius: 16,
-                      elevation: 10,
-                    }}
-                  >
-                    <Text
-                      style={{
-                        fontSize: 15,
-                        fontWeight: "900",
-                        color: !isFormValid
-                          ? isDark
-                            ? accentColor + "66"
-                            : "#9ca3af"
-                          : (accentColor === "#18181b" && isDark ? "#121212" : "#121212"),
-                        textTransform: "uppercase",
-                        letterSpacing: 1,
-                      }}
-                    >
-                      {editId ? "Save Changes" : "Save Goal"}
-                    </Text>
-                  </Pressable>
-                </View>
-              </Pressable>
-            </Animated.View>
-            </Animated.View>
-          </Animated.View>
-        </View>
-
-        <DatePickerModal
-          visible={showDatePicker}
-          selected={activeDateType === "start" ? startDate : endDate}
-          onSelect={(d) => {
-            if (activeDateType === "start") setStartDate(d);
-            else setEndDate(d);
-          }}
-          onClose={() => setShowDatePicker(false)}
-        />
-      </Modal>
-    );
-  }
 }

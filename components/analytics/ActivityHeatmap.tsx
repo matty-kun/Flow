@@ -93,6 +93,8 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
             const mins = minutesByDay[ymd] || 0;
             const isSelected = selectedDay === ymd;
             const isToday = isCurrentMonth && ymd === today;
+            const highlightColor = (accentColor === "#FFFFFF") ? (isDark ? "#FFFFFF" : "#121212") : getContrastingColor(accentColor, isDark);
+            const todayBorderColor = (accentColor === "#FFFFFF") ? (isDark ? "rgba(255,255,255,0.5)" : "rgba(18,18,18,0.3)") : `${highlightColor}80`;
 
             return (
               <Pressable
@@ -107,7 +109,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
                   alignItems: "center",
                   justifyContent: "center",
                   borderWidth: isSelected ? 2 : isToday ? 1.5 : 0,
-                  borderColor: isSelected ? getContrastingColor(accentColor, isDark) : isToday ? `${getContrastingColor(accentColor, isDark)}80` : "transparent",
+                  borderColor: isSelected ? highlightColor : isToday ? todayBorderColor : "transparent",
                 }}
               >
                 <Text
@@ -116,7 +118,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
                     fontWeight: isToday ? "900" : "600",
                     color:
                       mins > 0
-                        ? (accentColor === "#18181b" && isDark ? "#18181b" : "#FFFFFF")
+                        ? ((accentColor === "#FFFFFF" && !isDark) ? "#121212" : (accentColor === "#18181b" && isDark ? "#18181b" : "#FFFFFF"))
                         : isDark
                         ? "#52525b"
                         : "#d1d5db",

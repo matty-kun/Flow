@@ -1,8 +1,9 @@
 import { CategoryIcon } from "@/components/category/CategoryIcon";
 import ActionSheet from "@/components/ui/ActionSheet";
 import ActivityHeatmap from "@/components/analytics/ActivityHeatmap";
+import LogCard from "@/components/log/LogCard";
 import { useLanguage } from "@/context/LanguageContext";
-import { Activity, Category, useTracking } from "@/context/TrackingContext";
+import { Activity, Category, CustomGoal, useTracking } from "@/context/TrackingContext";
 import { DisplayActivity, pomodoroBaseTitle } from "@/utils/pomodoroMerge";
 import { useAppTheme } from "@/context/ThemeContext";
 import { impact } from "@/utils/haptics";
@@ -36,7 +37,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 export default React.memo(function LogsScreen() {
-  const { activities, deleteActivity, duplicateActivity, categories } =
+  const { activities, deleteActivity, duplicateActivity, categories, customGoals } =
     useTracking();
   const { t } = useLanguage();
   const { colorScheme } = useColorScheme();
@@ -194,19 +195,6 @@ export default React.memo(function LogsScreen() {
         {/* Header */}
         <View className="flex-row items-center justify-between mb-6 mt-8">
           <View className="flex-row items-center gap-3">
-            <Pressable
-              onPress={() => router.back()}
-              style={{
-                width: 44,
-                height: 44,
-                borderRadius: 22,
-                backgroundColor: isDark ? "#27272a" : "#f3f4f6",
-                alignItems: "center",
-                justifyContent: "center",
-              }}
-            >
-              <ArrowLeft size={20} color={isDark ? "#fff" : "#121212"} />
-            </Pressable>
             <Text className="text-4xl font-black text-klowk-black dark:text-white">
               {t("history")}
             </Text>
@@ -351,78 +339,46 @@ export default React.memo(function LogsScreen() {
 
             {(logs as DisplayActivity[]).map((log) => {
               const category = categories.find((c) => c.id === log.category);
-              const catColor = category?.color || "#6b7280";
               const isPomodoro = !!log.pomodoroIds;
+              const matchedGoal = customGoals.find(
+                (g: CustomGoal) =>
+                  (log.title === g.name || log.title.startsWith(g.name + " —")) &&
+                  log.category === g.categoryId,
+              );
+
+              let displayTitle = log.title;
+              if (matchedGoal) {
+                if (log.title === matchedGoal.name) {
+                  displayTitle = "";
+                } else if (log.title.startsWith(matchedGoal.name + " — ")) {
+                  displayTitle = log.title.replace(matchedGoal.name + " — ", "");
+                }
+              }
 
               return (
-                <View
+                <LogCard
                   key={isPomodoro ? `pomo-${log.pomodoroIds!.join("-")}` : log.id}
-                  className="mb-4 bg-white dark:bg-zinc-900 p-5 rounded-[28px] border border-gray-50 dark:border-zinc-800 shadow-sm flex-row items-center"
-                >
-                  <View
-                    style={{ backgroundColor: `${catColor}10` }}
-                    className="w-12 h-12 rounded-[16px] items-center justify-center mr-4"
-                  >
-                    <CategoryIcon
-                      name={category?.iconName || "tag"}
-                      size={20}
-                      color={catColor}
-                    />
-                  </View>
-                  <View className="flex-1">
-                    <Text className="text-klowk-black dark:text-white font-bold text-base mb-1">
-                      {log.title || t("untitled_session")}
-                    </Text>
-                    <View className="flex-row items-center flex-wrap" style={{ gap: 4 }}>
-                      <Text
-                        style={{ color: catColor }}
-                        className="text-[10px] font-black uppercase"
-                      >
-                        {category?.label || t("personal")}
-                      </Text>
-                      {isPomodoro && log.pomodoroRounds != null && (
-                        <View style={{ backgroundColor: accentColor + "33", borderRadius: 20, paddingHorizontal: 7, paddingVertical: 2, flexDirection: "row", alignItems: "center" }}>
-                          <Text style={{ fontSize: 9 }}>🍅</Text>
-                          <Text style={{ color: accentColor, fontSize: 9, fontWeight: "900", marginLeft: 3, textTransform: "uppercase" }}>
-                            {log.pomodoroRounds} {log.pomodoroRounds === 1 ? "round" : "rounds"}
-                          </Text>
-                        </View>
-                      )}
-                      <Text className="text-[10px] text-gray-400 dark:text-gray-500 font-bold uppercase">
-                        {formatTimestamp(log.start_time)}
-                      </Text>
-                    </View>
-                  </View>
-                  <View className="items-end ml-4">
-                    <Text className="text-klowk-black dark:text-white font-black text-lg mb-1">
-                      {formatLogDuration(
-                        log.start_time,
-                        log.end_time,
-                        log.duration,
-                      )}
-                    </Text>
-                    <TouchableOpacity
-                      onPress={() => {
-                        if (isPomodoro) {
-                          setSelectedPomodoroIds(log.pomodoroIds!);
-                        } else {
-                          selectedActivityRef.current = log;
-                          setSelectedActionLogId(log.id);
-                        }
-                      }}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                      className="p-1"
-                    >
-                      <MoreHorizontal size={16} color="#9ca3af" />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                  log={{ ...log, title: displayTitle }}
+                  categoryColor={category?.color || "#6b7280"}
+                  categoryLabel={category?.label || t("personal")}
+                  categoryIconName={category?.iconName || "tag"}
+                  pomodoroRounds={log.pomodoroRounds}
+                  goalName={matchedGoal?.name}
+                  onPressMore={() => {
+                    if (isPomodoro) {
+                      setSelectedPomodoroIds(log.pomodoroIds!);
+                    } else {
+                      selectedActivityRef.current = log as unknown as Activity;
+                      setSelectedActionLogId(log.id);
+                    }
+                  }}
+                />
               );
             })}
           </View>
         ))}
 
-        <View style={{ height: 160 }} />
+        <View style={{ height: 200 }} />
       </ScrollView>
 
       {/* Filter Sheet */}

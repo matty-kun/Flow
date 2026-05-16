@@ -11,14 +11,24 @@ export const PRESET_COLORS: PresetColor[] = [
   { id: "amber", name: "Amber", value: "#FBBF24" }, // Default Flow yellow
   { id: "teal", name: "Teal", value: "#14b8a6" },
   { id: "rose", name: "Rose", value: "#f43f5e" },
-  { id: "pink", name: "Pink", value: "#f472b6" }, // Light Pink (Tailwind Pink 400)
+  { id: "pink", name: "Pink", value: "#f472b6" },
   { id: "indigo", name: "Indigo", value: "#6366f1" },
   { id: "emerald", name: "Emerald", value: "#10b981" },
   { id: "violet", name: "Violet", value: "#8b5cf6" },
   { id: "sky", name: "Sky", value: "#0ea5e9" },
   { id: "orange", name: "Orange", value: "#f97316" },
+  { id: "brown", name: "Brown", value: "#78350f" },
+  { id: "white", name: "White", value: "#FFFFFF" }, // Uses gradient in UI
   { id: "black", name: "Black", value: "#18181b" },
 ];
+
+export const getFilteredColors = (isDark: boolean) => {
+  return PRESET_COLORS.filter(color => {
+    if (isDark && color.id === "black") return false;
+    if (!isDark && color.id === "white") return false;
+    return true;
+  });
+};
 
 type ThemeContextType = {
   accentColor: string;

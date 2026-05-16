@@ -146,12 +146,14 @@ export default function WheelPicker({
       </Animated.View>
 
       <LinearGradient
-        colors={[resolvedBg, `${resolvedBg}00`]}
+        colors={[resolvedBg, "transparent"]}
+        locations={[0, 1]}
         style={{ position: "absolute", top: 0, left: 0, right: 0, height: itemHeight }}
         pointerEvents="none"
       />
       <LinearGradient
-        colors={[`${resolvedBg}00`, resolvedBg]}
+        colors={["transparent", resolvedBg]}
+        locations={[0, 1]}
         style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: itemHeight }}
         pointerEvents="none"
       />

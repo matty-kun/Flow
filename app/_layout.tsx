@@ -117,6 +117,8 @@ LogBox.ignoreLogs([
   "SafeAreaView has been deprecated and will be removed in a future release. Please use 'react-native-safe-area-context' instead.",
 ]);
 
+import { FocusModeProvider } from "@/context/FocusModeContext";
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     SpaceMono: require("../assets/fonts/SpaceMono-Regular.ttf"),
@@ -147,11 +149,13 @@ export default function RootLayout() {
         <LanguageProvider>
           <TrackingProvider>
             <AppThemeProvider>
-              <OnboardingProvider>
-                <SummaryVisibleProvider>
-                  <RootLayoutNav />
-                </SummaryVisibleProvider>
-              </OnboardingProvider>
+              <FocusModeProvider>
+                <OnboardingProvider>
+                  <SummaryVisibleProvider>
+                    <RootLayoutNav />
+                  </SummaryVisibleProvider>
+                </OnboardingProvider>
+              </FocusModeProvider>
             </AppThemeProvider>
           </TrackingProvider>
         </LanguageProvider>
@@ -255,34 +259,12 @@ function RootLayoutNav() {
           }}
         />
         <Stack.Screen
-          name="logmanual"
-          options={{
-            presentation: "modal",
-            contentStyle: { backgroundColor: bg },
-          }}
-        />
-        <Stack.Screen
-          name="live"
-          options={{
-            presentation: "modal",
-            contentStyle: { backgroundColor: bg },
-          }}
-        />
-        <Stack.Screen
           name="tracker"
           options={{
             presentation: "fullScreenModal",
             animation: "none",
             contentStyle: { backgroundColor: bg },
           }}
-        />
-        <Stack.Screen
-          name="chat"
-          options={{ contentStyle: { backgroundColor: bg } }}
-        />
-        <Stack.Screen
-          name="chat-help"
-          options={{ contentStyle: { backgroundColor: bg } }}
         />
         <Stack.Screen
           name="settings"
@@ -301,10 +283,6 @@ function RootLayoutNav() {
           options={{ contentStyle: { backgroundColor: bg } }}
         />
         <Stack.Screen
-          name="history"
-          options={{ contentStyle: { backgroundColor: bg } }}
-        />
-        <Stack.Screen
           name="categories"
           options={{ contentStyle: { backgroundColor: bg } }}
         />
@@ -318,6 +296,10 @@ function RootLayoutNav() {
         />
         <Stack.Screen
           name="share-session"
+          options={{ contentStyle: { backgroundColor: bg } }}
+        />
+        <Stack.Screen
+          name="logmanual"
           options={{ contentStyle: { backgroundColor: bg } }}
         />
       </Stack>

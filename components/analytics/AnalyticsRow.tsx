@@ -43,9 +43,9 @@ export default function AnalyticsRow({
     <View className="px-6 flex-row justify-between mb-8">
       {/* Intensity Card */}
       <MotiView
-        from={{ opacity: 0, translateX: -20 }}
-        animate={{ opacity: 1, translateX: 0 }}
-        transition={{ type: "spring", delay: 400 }}
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 600, delay: 300 }}
         className="w-[48.5%] rounded-[32px] p-5 shadow-sm"
         style={{ 
           backgroundColor: isDark ? accentColor + "15" : accentColor + "10",
@@ -90,9 +90,9 @@ export default function AnalyticsRow({
 
       {/* Summary Card */}
       <MotiView
-        from={{ opacity: 0, translateX: 20 }}
-        animate={{ opacity: 1, translateX: 0 }}
-        transition={{ type: "spring", delay: 400 }}
+        from={{ opacity: 0, translateY: 20 }}
+        animate={{ opacity: 1, translateY: 0 }}
+        transition={{ type: "timing", duration: 600, delay: 300 }}
         className="w-[48.5%] rounded-[32px] p-5 shadow-sm justify-between"
         style={{ 
           backgroundColor: isDark ? accentColor + "10" : accentColor + "08",

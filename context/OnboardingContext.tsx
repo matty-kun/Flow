@@ -11,8 +11,10 @@ type OnboardingContextType = {
   isOnboarded: boolean;
   userName: string | null;
   dailyGoalHours: number | null;
+  projects: string[];
   setUserName: (name: string) => Promise<void>;
   setDailyGoalHours: (hours: number) => Promise<void>;
+  setProjects: (projects: string[]) => Promise<void>;
   completeOnboarding: () => Promise<void>;
   resetOnboarding: () => Promise<void>;
 };
@@ -22,13 +24,13 @@ const OnboardingContext = createContext<OnboardingContextType | null>(null);
 const ONBOARDING_KEY = "klowk_onboarded";
 const USER_NAME_KEY = "klowk_user_name";
 const DAILY_GOAL_KEY = "klowk_daily_goal_hours";
+const PROJECTS_KEY = "klowk_projects";
 
 export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [isOnboarded, setIsOnboarded] = useState(false);
   const [userName, setUserNameState] = useState<string | null>(null);
-  const [dailyGoalHours, setDailyGoalHoursState] = useState<number | null>(
-    null,
-  );
+  const [dailyGoalHours, setDailyGoalHoursState] = useState<number | null>(null);
+  const [projects, setProjectsState] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load onboarding state on mount
@@ -38,10 +40,12 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         const onboarded = await AsyncStorage.getItem(ONBOARDING_KEY);
         const name = await AsyncStorage.getItem(USER_NAME_KEY);
         const goal = await AsyncStorage.getItem(DAILY_GOAL_KEY);
+        const savedProjects = await AsyncStorage.getItem(PROJECTS_KEY);
 
         setIsOnboarded(onboarded === "true");
         setUserNameState(name);
         if (goal) setDailyGoalHoursState(parseFloat(goal));
+        if (savedProjects) setProjectsState(JSON.parse(savedProjects));
       } catch (e) {
         console.error("Failed to load onboarding state", e);
       } finally {
@@ -69,6 +73,15 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const setProjects = async (projectsArray: string[]) => {
+    try {
+      setProjectsState(projectsArray);
+      await AsyncStorage.setItem(PROJECTS_KEY, JSON.stringify(projectsArray));
+    } catch (e) {
+      console.error("Failed to save projects", e);
+    }
+  };
+
   const completeOnboarding = async () => {
     try {
       await AsyncStorage.setItem(ONBOARDING_KEY, "true");
@@ -83,9 +96,11 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       await AsyncStorage.removeItem(ONBOARDING_KEY);
       await AsyncStorage.removeItem(USER_NAME_KEY);
       await AsyncStorage.removeItem(DAILY_GOAL_KEY);
+      await AsyncStorage.removeItem(PROJECTS_KEY);
       setIsOnboarded(false);
       setUserNameState(null);
       setDailyGoalHoursState(null);
+      setProjectsState([]);
     } catch (e) {
       console.error("Failed to reset onboarding", e);
     }
@@ -101,8 +116,10 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
         isOnboarded,
         userName,
         dailyGoalHours,
+        projects,
         setUserName,
         setDailyGoalHours,
+        setProjects,
         completeOnboarding,
         resetOnboarding,
       }}

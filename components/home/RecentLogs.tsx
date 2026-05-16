@@ -30,15 +30,17 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
   const selectedActivityRef = useRef<Activity | null>(null);
   const { activities } = useTracking();
 
+  const isWhiteTheme = accentColor.toLowerCase().trim() === "#ffffff" || accentColor.toLowerCase().trim() === "#fff";
+
   return (
     <>
       <MotiView
-        from={{ opacity: 0, translateY: 10 }}
+        from={{ opacity: 0, translateY: 20 }}
         animate={{ opacity: 1, translateY: 0 }}
-        transition={{ type: "timing", delay: 800 }}
+        transition={{ type: "timing", duration: 600, delay: 700 }}
         style={{ paddingHorizontal: 24, marginBottom: 16 }}
       >
-        <Text style={{ fontSize: 10, fontWeight: "900", color: accentColor, textTransform: "uppercase", letterSpacing: 2 }}>
+        <Text style={{ fontSize: 10, fontWeight: "900", color: (isDark && isWhiteTheme) ? "#FFFFFF" : accentColor, textTransform: "uppercase", letterSpacing: 2 }}>
           {t("logs")}
         </Text>
       </MotiView>
@@ -52,10 +54,19 @@ export default function RecentLogs({ recentLogs, categories, customGoals, delete
               (log.title === g.name || log.title.startsWith(g.name + " —")) &&
               log.category === g.categoryId,
           );
+          let displayTitle = log.title;
+          if (matchedGoal) {
+            if (log.title === matchedGoal.name) {
+              displayTitle = "";
+            } else if (log.title.startsWith(matchedGoal.name + " — ")) {
+              displayTitle = log.title.replace(matchedGoal.name + " — ", "");
+            }
+          }
+
           return (
             <LogCard
               key={isPomodoro ? `pomo-${log.pomodoroIds!.join("-")}` : log.id}
-              log={log}
+              log={{ ...log, title: displayTitle }}
               categoryColor={cat?.color || "#6b7280"}
               categoryLabel={cat?.label || t("personal")}
               categoryIconName={cat?.iconName || "tag"}

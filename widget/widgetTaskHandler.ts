@@ -2,7 +2,6 @@ import type { WidgetTaskHandlerProps } from "react-native-android-widget";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React from "react";
 import { FocusWidget } from "./FocusWidget";
-import { StreakWidget } from "./StreakWidget";
 
 export const WIDGET_DATA_KEY = "flow_widget_data";
 
@@ -15,7 +14,6 @@ export interface WidgetData {
 
 const nameToWidget: Record<string, any> = {
   FocusWidget,
-  StreakWidget,
 };
 
 export async function widgetTaskHandler(props: WidgetTaskHandlerProps) {

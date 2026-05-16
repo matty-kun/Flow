@@ -1,5 +1,4 @@
 import CategoryCardPicker from "@/components/category/CategoryCardPicker";
-import DatePickerModal from "@/components/forms/DatePickerModal";
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
 import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
@@ -27,13 +26,14 @@ import {
 type Props = {
   visible: boolean;
   onClose: () => void;
+  editingGoalId?: string | null;
 };
 
-export default function AddGoalModal({ visible, onClose }: Props) {
+export default function AddGoalModal({ visible, onClose, editingGoalId }: Props) {
   const { height } = useWindowDimensions();
   const { colorScheme } = useColorScheme();
   const isDark = colorScheme === "dark";
-  const { categories, addCustomGoal, activities } = useTracking();
+  const { categories, addCustomGoal, editCustomGoal, customGoals, activities } = useTracking();
   const { t } = useLanguage();
   const { accentColor } = useAppTheme();
 
@@ -41,14 +41,6 @@ export default function AddGoalModal({ visible, onClose }: Props) {
   const [targetHours, setTargetHours] = useState(0);
   const [targetMins, setTargetMins] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
-  const [startDate, setStartDate] = useState(new Date());
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 7);
-    return d;
-  });
-  const [showDatePicker, setShowDatePicker] = useState(false);
-  const [activeDateType, setActiveDateType] = useState<"start" | "end">("start");
   const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
   const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
@@ -77,13 +69,19 @@ export default function AddGoalModal({ visible, onClose }: Props) {
 
   useEffect(() => {
     if (visible) {
-      setGoalName("");
-      setTargetHours(0);
-      setTargetMins(0);
-      setStartDate(new Date());
-      const d = new Date();
-      d.setDate(d.getDate() + 7);
-      setEndDate(d);
+      if (editingGoalId) {
+        const g = customGoals.find(goal => goal.id === editingGoalId);
+        if (g) {
+          setGoalName(g.name);
+          setTargetHours(Math.floor(g.targetMins / 60));
+          setTargetMins(g.targetMins % 60);
+          setSelectedCatId(g.categoryId);
+        }
+      } else {
+        setGoalName("");
+        setTargetHours(0);
+        setTargetMins(0);
+      }
       Animated.parallel([
         Animated.timing(sheetBackdrop, { toValue: 1, duration: 220, useNativeDriver: true }),
         Animated.spring(sheetSlide, { toValue: 0, tension: 40, friction: 9, useNativeDriver: true }),
@@ -94,21 +92,43 @@ export default function AddGoalModal({ visible, onClose }: Props) {
         Animated.timing(sheetSlide, { toValue: 800, duration: 220, useNativeDriver: true }),
       ]).start();
     }
-  }, [visible]);
+  }, [visible, editingGoalId]);
 
   const handleSave = () => {
     const totalMins = targetHours * 60 + targetMins;
     if (!goalName.trim() || totalMins <= 0 || !selectedCatId) return;
-    const fixedEnd = new Date(endDate);
-    fixedEnd.setHours(23, 59, 59, 999);
-    addCustomGoal({
-      id: Date.now().toString(),
-      name: goalName.trim(),
-      targetMins: totalMins,
-      categoryId: selectedCatId,
-      startDate: startDate.getTime(),
-      endDate: fixedEnd.getTime(),
-    });
+
+    // Calculate current week range (Monday to Sunday)
+    const now = new Date();
+    const day = now.getDay(); // 0 is Sunday, 1 is Monday...
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1); // adjust when day is sunday
+    
+    const startOfWeek = new Date(now.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+
+    if (editingGoalId) {
+      editCustomGoal({
+        id: editingGoalId,
+        name: goalName.trim(),
+        targetMins: totalMins,
+        categoryId: selectedCatId,
+        startDate: startOfWeek.getTime(),
+        endDate: endOfWeek.getTime(),
+      });
+    } else {
+      addCustomGoal({
+        id: Date.now().toString(),
+        name: goalName.trim(),
+        targetMins: totalMins,
+        categoryId: selectedCatId,
+        startDate: startOfWeek.getTime(),
+        endDate: endOfWeek.getTime(),
+      });
+    }
     notification(NotificationFeedbackType.Success);
     onClose();
   };
@@ -132,185 +152,139 @@ export default function AddGoalModal({ visible, onClose }: Props) {
           <Pressable
             onPress={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: isDark ? "#1C1C1E" : "#fff",
-              borderTopLeftRadius: 40,
-              borderTopRightRadius: 40,
-              maxHeight: height * 0.9,
+              backgroundColor: isDark ? "#1A1A1A" : "#fff",
+              borderTopLeftRadius: 44,
+              borderTopRightRadius: 44,
+              maxHeight: height * 0.92,
             }}
           >
-                {/* Fixed header */}
-                <View style={{ paddingHorizontal: 32, paddingTop: 32, paddingBottom: 16 }}>
-                  <View style={{ flexDirection: "row", justifyContent: "space-between", alignItems: "center" }}>
-                    <Text style={{ fontSize: 24, fontWeight: "900", color: isDark ? "#fff" : "#121212" }}>
-                      {t("new_goal")}
-                    </Text>
-                    <Pressable
-                      onPress={onClose}
-                      hitSlop={{ top: 16, bottom: 16, left: 16, right: 16 }}
-                      style={{ zIndex: 10, width: 36, height: 36, borderRadius: 18, backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6", alignItems: "center", justifyContent: "center" }}
-                    >
-                      <X size={18} color={isDark ? "#fff" : "#121212"} />
-                    </Pressable>
-                  </View>
+            <View className="items-center py-3">
+              <View className="w-12 h-1 bg-gray-300 dark:bg-zinc-800 rounded-full" />
+            </View>
+
+            <View className="px-8 pb-6 flex-row justify-between items-center">
+              <View>
+                <Text className="text-2xl font-black text-klowk-black dark:text-white">
+                  {editingGoalId ? "Edit Goal" : "New Goal"}
+                </Text>
+                <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
+                  {editingGoalId ? "Update your goal parameters" : "Set your weekly focus target"}
+                </Text>
+              </View>
+              <Pressable
+                onPress={onClose}
+                className="w-10 h-10 rounded-full bg-gray-100 dark:bg-zinc-900 items-center justify-center"
+              >
+                <X size={20} color={isDark ? "#fff" : "#121212"} />
+              </Pressable>
+            </View>
+
+            <ScrollView
+              ref={scrollRef}
+              className="flex-grow-0"
+              contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: keyboardHeight > 0 ? keyboardHeight + 100 : 160 }}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={sheetScrollEnabled}
+              keyboardShouldPersistTaps="handled"
+              nestedScrollEnabled
+            >
+              {/* Goal Name */}
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">GOAL NAME</Text>
+                <View className="bg-gray-100 dark:bg-black/40 rounded-3xl border border-gray-200 dark:border-zinc-800 px-6 py-5">
+                  <TextInput
+                    value={goalName}
+                    onChangeText={setGoalName}
+                    placeholder="e.g. Master React Native"
+                    placeholderTextColor={isDark ? "#52525b" : "#9ca3af"}
+                    className="text-lg font-black text-klowk-black dark:text-white"
+                    returnKeyType="done"
+                  />
                 </View>
+              </View>
 
-                {/* Scrollable content — category, target, dates */}
-                <ScrollView
-                  ref={scrollRef}
-                  style={{ flex: 1 }}
-                  contentContainerStyle={{ paddingHorizontal: 32, paddingBottom: 16 }}
-                  showsVerticalScrollIndicator={false}
-                  bounces={false}
-                  scrollEnabled={sheetScrollEnabled}
-                  keyboardShouldPersistTaps="handled"
-                  keyboardDismissMode="none"
-                  nestedScrollEnabled
-                >
-                  {/* Category */}
-                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
-                    {t("category_label")}
-                  </Text>
-                  <View style={{ marginBottom: 24 }}>
-                    <CategoryCardPicker
-                      categories={categories}
-                      selectedId={selectedCatId}
-                      onSelect={setSelectedCatId}
-                      activities={activities}
-                    />
-                  </View>
+              {/* Category */}
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">GOAL CATEGORY</Text>
+                <CategoryCardPicker
+                  categories={categories}
+                  selectedId={selectedCatId}
+                  onSelect={setSelectedCatId}
+                  activities={activities}
+                />
+              </View>
 
-                  {/* Target */}
-                  <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
-                    Target
-                  </Text>
-                  <View
-                    onTouchStart={() => setSheetScrollEnabled(false)}
-                    onTouchEnd={() => setSheetScrollEnabled(true)}
-                    onTouchCancel={() => setSheetScrollEnabled(true)}
-                    style={{
-                      backgroundColor: isDark ? "#2c2c2e" : "#f9fafb",
-                      borderRadius: 20,
-                      borderWidth: 1,
-                      borderColor: isDark ? "#3a3a3c" : "#f3f4f6",
-                      marginBottom: 24,
-                      flexDirection: "row",
-                      paddingVertical: 12,
-                      paddingHorizontal: 8,
-                    }}
-                  >
-                    <View style={{ flex: 1 }}>
-                      <WheelPicker
-                        values={hourValues}
-                        selectedIndex={targetHours}
-                        onChange={setTargetHours}
-                        itemHeight={32}
-                        visibleItems={3}
-                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
-                      />
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>hrs</Text>
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <WheelPicker
-                        values={minValues}
-                        selectedIndex={targetMins}
-                        onChange={setTargetMins}
-                        itemHeight={32}
-                        visibleItems={3}
-                        bgColor={isDark ? "#2c2c2e" : "#f9fafb"}
-                      />
-                      <Text style={{ fontSize: 9, fontWeight: "700", color: isDark ? "#71717a" : "#9ca3af", marginTop: 6, textTransform: "uppercase", letterSpacing: 0.8, textAlign: "center" }}>min</Text>
-                    </View>
-                  </View>
-
-                  {/* Date Range */}
-                  <View style={{ flexDirection: "row", gap: 16, marginBottom: 16 }}>
-                    {(["start", "end"] as const).map((type) => (
-                      <View key={type} style={{ flex: 1 }}>
-                        <Text style={{ fontSize: 11, fontWeight: "900", color: isDark ? "#71717a" : "#9ca3af", textTransform: "uppercase", letterSpacing: 2, marginBottom: 12 }}>
-                          {type === "start" ? "Start Date" : "End Date"}
-                        </Text>
-                        <Pressable
-                          onPress={() => { setActiveDateType(type); setShowDatePicker(true); impact(ImpactFeedbackStyle.Light); }}
-                          style={{ backgroundColor: isDark ? "#2c2c2e" : "#f9fafb", borderRadius: 20, borderWidth: 1, borderColor: isDark ? "#3a3a3c" : "#f3f4f6", flexDirection: "row", alignItems: "center", height: 50, paddingHorizontal: 14 }}
-                        >
-                          <CalendarIcon size={14} color={isDark ? "#52525b" : "#9ca3af"} />
-                          <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: "700", color: isDark ? "#fff" : "#121212" }}>
-                            {(type === "start" ? startDate : endDate).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
-                          </Text>
-                        </Pressable>
-                      </View>
-                    ))}
-                  </View>
-                </ScrollView>
-
-                {/* Bottom bar — name input + save, sits above keyboard */}
+              {/* Weekly Target */}
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">WEEKLY HOUR TARGET</Text>
                 <View
-                  style={{
-                    paddingHorizontal: 20,
-                    paddingTop: 12,
-                    paddingBottom: keyboardHeight > 0 ? keyboardHeight + 8 : 20,
-                    borderTopWidth: 1,
-                    borderTopColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)",
-                    backgroundColor: isDark ? "#1C1C1E" : "#fff",
-                    flexDirection: "row",
-                    alignItems: "center",
-                    gap: 10,
-                  }}
+                  onTouchStart={() => setSheetScrollEnabled(false)}
+                  onTouchEnd={() => setSheetScrollEnabled(true)}
+                  onTouchCancel={() => setSheetScrollEnabled(true)}
+                  className="bg-gray-100 dark:bg-black/40 rounded-3xl border border-gray-200 dark:border-zinc-800 flex-row p-4"
                 >
-                  <View style={{
-                    flex: 1,
-                    backgroundColor: isDark ? "#2c2c2e" : "#f3f4f6",
-                    borderRadius: 18,
-                    borderWidth: 1,
-                    borderColor: isDark ? "#3a3a3c" : "#e5e7eb",
-                  }}>
-                    <TextInput
-                      value={goalName}
-                      onChangeText={setGoalName}
-                      placeholder="Goal name…"
-                      placeholderTextColor={isDark ? "#52525b" : "#d1d5db"}
-                      style={{ paddingHorizontal: 16, paddingVertical: 14, fontSize: 15, fontWeight: "600", color: isDark ? "#fff" : "#121212" }}
-                      returnKeyType="done"
-                      onSubmitEditing={() => Keyboard.dismiss()}
+                  <View className="flex-1 items-center">
+                    <WheelPicker
+                      values={hourValues}
+                      selectedIndex={targetHours}
+                      onChange={setTargetHours}
+                      itemHeight={40}
+                      visibleItems={3}
+                      bgColor={isDark ? "#00000066" : "#F3F4F6"}
                     />
+                    <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Hours</Text>
                   </View>
-                  <Pressable
-                    onPress={handleSave}
-                    disabled={!isFormValid}
-                    style={{
-                      paddingHorizontal: 20,
-                      paddingVertical: 14,
-                      borderRadius: 18,
-                      alignItems: "center",
-                      justifyContent: "center",
-                      backgroundColor: !isFormValid 
-                        ? (isDark ? getContrastingColor(accentColor, isDark) + "26" : "#f3f4f6") 
-                        : getContrastingColor(accentColor, isDark),
-                    }}
-                  >
-                    <Text style={{
-                      fontSize: 14,
-                      fontWeight: "900",
-                      color: !isFormValid 
-                        ? (isDark ? getContrastingColor(accentColor, isDark) + "66" : "#9ca3af") 
-                        : (accentColor === "#18181b" && isDark ? "#121212" : "#fff"),
-                      textTransform: "uppercase",
-                      letterSpacing: 0.5,
-                    }}>
-                      Save
-                    </Text>
-                  </Pressable>
+                  <View className="w-[1px] h-full bg-gray-200 dark:bg-zinc-800 my-4" />
+                  <View className="flex-1 items-center">
+                    <WheelPicker
+                      values={minValues}
+                      selectedIndex={targetMins}
+                      onChange={setTargetMins}
+                      itemHeight={40}
+                      visibleItems={3}
+                      bgColor={isDark ? "#00000066" : "#F3F4F6"}
+                    />
+                    <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-2">Minutes</Text>
+                  </View>
                 </View>
+              </View>
+
+            </ScrollView>
+
+            {/* Floating Save Button */}
+            <View 
+              style={{ 
+                position: "absolute", 
+                bottom: keyboardHeight > 0 ? keyboardHeight + 20 : 40,
+                left: 32, 
+                right: 32 
+              }}
+            >
+              <Pressable
+                onPress={handleSave}
+                disabled={!isFormValid}
+                style={{ 
+                  backgroundColor: !isFormValid ? (isDark ? "#2A2A2A" : "#F3F4F6") : accentColor,
+                  shadowColor: accentColor,
+                  shadowOffset: { width: 0, height: 10 },
+                  shadowOpacity: !isFormValid ? 0 : 0.3,
+                  shadowRadius: 20,
+                  elevation: !isFormValid ? 0 : 10
+                }}
+                className="h-16 rounded-full items-center justify-center flex-row"
+              >
+                <Text 
+                  style={{ color: !isFormValid ? "#9ca3af" : "white" }} 
+                  className="text-lg font-black uppercase tracking-widest"
+                >
+                  {editingGoalId ? "Update Goal" : "Create Goal"}
+                </Text>
+              </Pressable>
+            </View>
           </Pressable>
         </Animated.View>
       </View>
 
-      <DatePickerModal
-        visible={showDatePicker}
-        selected={activeDateType === "start" ? startDate : endDate}
-        onSelect={(d) => { if (activeDateType === "start") setStartDate(d); else setEndDate(d); }}
-        onClose={() => setShowDatePicker(false)}
-      />
     </Modal>
   );
 }

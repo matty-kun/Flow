@@ -6,13 +6,16 @@ export default function OnboardingLayout() {
     <Stack
       screenOptions={{
         headerShown: false,
-        animationEnabled: false,
+        animation: "slide_from_right",
       }}
     >
       <Stack.Screen name="handshake" />
+      <Stack.Screen name="projects" />
+      <Stack.Screen name="flip-tutorial" />
+      <Stack.Screen name="notifications" />
+      {/* Legacy screens kept for reference but not in main flow */}
       <Stack.Screen name="goal" />
       <Stack.Screen name="test-log" />
-      <Stack.Screen name="notifications" />
     </Stack>
   );
 }

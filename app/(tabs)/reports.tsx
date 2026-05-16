@@ -769,7 +769,7 @@ export default React.memo(function ReportsScreen() {
                     width: 110,
                     height: 26,
                     bottom: 10,
-                    backgroundColor: isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.12)",
+                    backgroundColor: isDark ? "rgba(255,255,255,0.2)" : "rgba(0,0,0,0.12)",
                     borderRadius: 13,
                     transform: [{ scaleX: 1.2 }],
                   }}
@@ -993,6 +993,7 @@ export default React.memo(function ReportsScreen() {
 
               <LinearGradient
                 colors={[accentColor, accentColor + "B3"]}
+                locations={[0, 1]}
                 style={{
                   borderRadius: 34,
                   padding: 32,

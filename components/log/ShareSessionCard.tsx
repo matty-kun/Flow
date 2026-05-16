@@ -154,6 +154,7 @@ export default function ShareSessionCard({
           />
           <LinearGradient
             colors={["transparent", "rgba(0,0,0,0.72)"]}
+            locations={[0, 1]}
             style={{
               position: "absolute",
               bottom: 0,
@@ -184,6 +185,7 @@ export default function ShareSessionCard({
               ? [`${catColor}22`, "#121212"]
               : [`${catColor}18`, "#ffffff"]
           }
+          locations={[0, 1]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={{ minHeight: 420, justifyContent: "flex-end" }}

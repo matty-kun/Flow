@@ -3,7 +3,6 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { dismissInactivityReminderForToday } from "@/utils/notifications";
 import { Platform } from "react-native";
 import { WIDGET_DATA_KEY } from "@/widget/widgetTaskHandler";
-import { computeStreak } from "@/utils/streak";
 import { useSQLiteContext } from "expo-sqlite";
 import {
     createContext,
@@ -53,7 +52,7 @@ type TrackingContextType = {
     description?: string,
     targetSecs?: number,
   ) => Promise<void>;
-  stopTracker: () => Promise<void>;
+  stopTracker: (metadata?: { title?: string; category?: string; description?: string }) => Promise<void>;
   deleteActivity: (id: number) => Promise<void>;
   clearAllActivities: () => Promise<void>;
   addManualActivity: (
@@ -240,6 +239,7 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     category: string,
     description?: string,
     targetSecs?: number,
+    _retryCount = 0
   ) => {
     if (currentActivityRef.current) return;
     try {
@@ -249,12 +249,17 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
         [title, category, description || null, now, targetSecs || null, now],
       );
       await refreshActivities();
-    } catch (err) {
-      console.error("Failed to start tracker:", err);
+    } catch (err: any) {
+      if (err.message?.includes("closed resource") && _retryCount < 3) {
+        console.warn(`DB closed during hot-reload, retrying start (${_retryCount + 1}/3)...`);
+        setTimeout(() => startTracker(title, category, description, targetSecs, _retryCount + 1), 1000);
+      } else {
+        console.error("Failed to start tracker:", err);
+      }
     }
   };
 
-  const stopTracker = async () => {
+  const stopTracker = async (metadata?: { title?: string; category?: string; description?: string }, _retryCount = 0) => {
     const activityToStop = currentActivityRef.current;
     if (!activityToStop) return;
     try {
@@ -265,14 +270,26 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
       );
 
       await db.runAsync(
-        "UPDATE activities SET end_time = ?, duration = ? WHERE id = ?",
-        [now, durationSecs, activityToStop.id],
+        "UPDATE activities SET end_time = ?, duration = ?, title = ?, category = ?, description = ? WHERE id = ?",
+        [
+          now, 
+          durationSecs, 
+          metadata?.title || activityToStop.title, 
+          metadata?.category || activityToStop.category, 
+          metadata?.description || activityToStop.description, 
+          activityToStop.id
+        ],
       );
       setIsMinimized(false);
       await refreshActivities();
       dismissInactivityReminderForToday().catch(() => {});
-    } catch (err) {
-      console.error("Failed to stop tracker:", err);
+    } catch (err: any) {
+      if ((err.message?.includes("closed resource") || err.message?.includes("API misuse")) && _retryCount < 3) {
+        console.warn(`DB issue during stop, retrying (${_retryCount + 1}/3)...`);
+        setTimeout(() => stopTracker(_retryCount + 1), 1000);
+      } else {
+        console.error("Failed to stop tracker:", err);
+      }
     }
   };
 
@@ -441,10 +458,15 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
 
   const getTotalFocusTimeToday = () => {
     const startOfToday = new Date().setHours(0, 0, 0, 0);
-    const secs = activities
+    let totalSecs = activities
       .filter((a) => a.created_at >= startOfToday && a.duration)
       .reduce((acc, curr) => acc + (curr.duration || 0), 0);
-    return Math.floor(secs / 60); // Return minutes for the dashboard summary compatibility
+    
+    if (currentActivityRef.current && currentActivityRef.current.start_time >= startOfToday) {
+      totalSecs += Math.floor((Date.now() - currentActivityRef.current.start_time) / 1000);
+    }
+
+    return Math.floor(totalSecs / 60);
   };
 
   return (

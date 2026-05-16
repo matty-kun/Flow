@@ -5,7 +5,14 @@ import { useTracking } from "@/context/TrackingContext";
 import { formatDuration } from "@/utils/time";
 import { useColorScheme } from "nativewind";
 import React from "react";
-import { Image, Text, View } from "react-native";
+import { Image, Text, View, TouchableOpacity } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Settings2 } from "lucide-react-native";
+import { impact } from "@/utils/haptics";
+import { ImpactFeedbackStyle } from "expo-haptics";
+import { useNavigation } from "@react-navigation/native";
+import { useFocusMode } from "@/context/FocusModeContext";
+import { Zap } from "lucide-react-native";
 
 const FORECAST_MESSAGES: Record<string, Record<string, string>> = {
   on_track: {
@@ -33,16 +40,12 @@ const FLOW_SAYINGS = {
       "That's {time} of pure focus today. Keep the momentum going!",
       "{time} locked in today. You're building something great.",
       "Crushed {time} of deep work today. Flow state achieved.",
-      "{time} of focus today, that's how legends are made.",
-      "You showed up for {time} today. Consistency is everything.",
     ],
     tl: [
       "Na-focus ka na ng {time} ngayon. Stellar work!",
       "{time} ng pure focus ngayon. Keep the momentum!",
       "{time} na locked in ngayon. Binubuo mo ng something great.",
       "Crushed {time} of deep work ngayon. Flow state achieved.",
-      "{time} of focus ngayon — ganyan gawa ang mga legends.",
-      "Nandito ka ng {time} ngayon. Consistency is everything.",
     ],
   },
   ready: {
@@ -50,17 +53,11 @@ const FLOW_SAYINGS = {
       "Ready for a deep focus session? I'm here to help you track your wins.",
       "Your next breakthrough is one session away. Let's get started.",
       "Every great work day starts with the first focus block. Ready?",
-      "The best time to focus was yesterday. The second best is right now.",
-      "Silence the noise. Lock in. Let's build something today.",
-      "Your goals are waiting. One focused session can change everything.",
     ],
     tl: [
       "Ready na for a deep focus session? Nandito ako to help you track your wins.",
       "One session away na ang iyong next breakthrough. Tara na.",
-      "Every great work day starts with the first focus block. Ready ka na?",
-      "The best time to focus was yesterday. The second best is right now.",
-      "I-silence ang lahat. Lock in. Mag-build tayo ngayon.",
-      "Your goals are waiting. One focused session can change everything.",
+      "Every great work day starts with the first focus block. Ready?",
     ],
   },
 };
@@ -74,30 +71,6 @@ interface Props {
   greetingKey: string;
 }
 
-function FlowCharacter() {
-  return (
-    <View className="relative items-center justify-center">
-      <View
-        className="absolute rounded-full"
-        style={{ 
-          width: 110,
-          height: 26,
-          bottom: -10,
-          left: 10,
-          backgroundColor: "rgba(0,0,0,0.18)",
-          transform: [{ scaleX: 1.15 }],
-        }}
-      />
-      <Image
-        source={require("../../assets/images/icon.png")}
-        style={{ width: 155, height: 155 }}
-        resizeMode="contain"
-        accessibilityLabel="Flow character"
-      />
-    </View>
-  );
-}
-
 export default function GreetingSection({
   klowkForecastStatus,
   klowkForecastMessage,
@@ -105,13 +78,17 @@ export default function GreetingSection({
   dayOfWeek,
   dayOfMonth,
   greetingKey,
-}: Props) {
+} : Props) {
   const { t, language } = useLanguage();
   const { userName } = useOnboarding();
   const { accentColor } = useAppTheme();
-  const { currentActivity } = useTracking();
   const { colorScheme } = useColorScheme();
+  const navigation = useNavigation<any>();
+  const { isSensorEnabled, setIsSensorEnabled } = useFocusMode();
   const isDark = colorScheme === "dark";
+
+  const isWhiteTheme = accentColor.toLowerCase().trim() === "#ffffff" || accentColor.toLowerCase().trim() === "#fff";
+  const isBlackTheme = accentColor.toLowerCase().trim() === "#18181b";
 
   const bubbleText =
     klowkForecastStatus === "no_goal"
@@ -132,35 +109,128 @@ export default function GreetingSection({
           language === "tl" ? "tl" : "en"
         ] ?? klowkForecastMessage);
 
+  const gradientColors = isDark 
+    ? [accentColor + (isWhiteTheme ? "CC" : "70"), accentColor + (isWhiteTheme ? "99" : "20"), isWhiteTheme ? "#FFFFFF" : "#0A0A0A"] 
+    : [accentColor + "80", accentColor + "30", isWhiteTheme ? "#FFFFFF" : "#f1f3f1"];
+
+  const bubbleBg = isDark ? (isWhiteTheme ? "rgba(255,255,255,0.98)" : "rgba(45,45,50,0.95)") : "rgba(255,255,255,0.98)";
+
   return (
-    <View className="px-6 mb-8 mt-3">
-      <View className="flex-row items-center mb-1">
-        <Text className="text-gray-400 dark:text-gray-500 font-bold uppercase text-[10px] tracking-[1.5px]">
+    <LinearGradient
+      colors={gradientColors as any}
+      locations={[0, 0.5, 1]}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 0, y: 1 }}
+      style={{ paddingTop: 40, paddingBottom: 100, overflow: "hidden" }}
+    >
+      {/* Header Buttons */}
+      <View className="flex-row justify-between items-center px-6 mt-2 mb-2">
+        <TouchableOpacity
+          onPress={() => { 
+            impact(ImpactFeedbackStyle.Medium);
+            setIsSensorEnabled(!isSensorEnabled); 
+          }}
+          className={`px-4 py-2.5 rounded-full flex-row items-center backdrop-blur-md border`}
+          style={{ 
+            backgroundColor: isSensorEnabled ? accentColor : (isWhiteTheme && isDark ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)"),
+            borderColor: isSensorEnabled ? accentColor : (isWhiteTheme && isDark ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.1)")
+          }}
+        >
+          <Zap size={14} color={isSensorEnabled ? "white" : (isWhiteTheme && isDark ? "#000" : (isDark ? "#fff" : "#2d3748"))} />
+          <Text 
+            className={`ml-1.5 text-[10px] font-black uppercase tracking-[2px] ${
+              isSensorEnabled ? "text-white" : (isWhiteTheme && isDark ? "text-klowk-black" : "text-white dark:text-white/80")
+            }`}
+          >
+            {isSensorEnabled ? "FOCUS ON" : "FOCUS OFF"}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          onPress={() => { impact(ImpactFeedbackStyle.Medium); navigation.navigate("settings"); }}
+          className="p-2.5 rounded-full bg-white/10 dark:bg-black/20 backdrop-blur-md border border-white/10"
+        >
+          <Settings2 size={20} color={isWhiteTheme && isDark ? "#000" : (isDark ? "#fff" : "#2d3748")} />
+        </TouchableOpacity>
+      </View>
+
+      <View className="px-6 mb-8">
+        <Text className={`${isWhiteTheme && isDark ? "text-gray-400" : "text-gray-500 dark:text-gray-400"} font-bold uppercase text-[11px] tracking-[1.5px] mb-1`}>
           {dayOfWeek}, {dayOfMonth}
         </Text>
+        <Text className={`text-[28px] font-black ${isWhiteTheme && isDark ? "text-klowk-black" : "text-klowk-black dark:text-white"}`}>
+          {t(greetingKey as any)} <Text style={{ color: isBlackTheme && isDark ? "#fff" : (isWhiteTheme && isDark ? "#000" : accentColor) }}>{userName || "User"}!</Text>
+        </Text>
       </View>
-      <Text className="text-[26px] font-black text-klowk-black dark:text-white mb-10">
-        {t(greetingKey as any)}{" "}
-        <Text style={{ color: accentColor }}>{userName || "User"}!</Text>
-      </Text>
 
-      <View className="relative items-center justify-center -mt-12">
-        <View
-          className="absolute -left-6 -right-6 h-[56px]"
-          style={{ top: "52%", backgroundColor: accentColor }}
-        />
-        <View className="flex-row items-center justify-between mt-9">
-          <View className="w-40 h-40 items-center justify-center -mt-14">
-            <FlowCharacter />
-          </View>
-          <View className="relative bg-white dark:bg-zinc-900 p-4 rounded-[32px] shadow-sm w-[55%] border border-gray-50 dark:border-zinc-800 -mt-6 ml-2">
-            <View className="absolute -left-2 top-6 w-4 h-4 bg-white dark:bg-zinc-900 border-l border-b border-gray-50 dark:border-zinc-800 rotate-[45deg]" />
-            <Text className="text-xs text-klowk-black dark:text-white font-semibold leading-5">
-              {bubbleText}
-            </Text>
-          </View>
+      <View className="px-6 flex-row items-center -mt-6">
+        <View 
+          className="w-[120px] h-[120px] overflow-visible relative items-center justify-center"
+          style={{ marginTop: -25 }}
+        >
+          {/* Snail Shadow */}
+          <View 
+            style={{ 
+              position: "absolute", 
+              width: 120, 
+              height: 16, 
+              backgroundColor: isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.15)", 
+              borderRadius: 50, 
+              bottom: -20,
+              left: -20,
+              transform: [{ scaleX: 1.5 }],
+              filter: "blur(4px)"
+            }} 
+          />
+          <Image
+            source={todayMinsTotal > 240 
+              ? require("../../assets/images/sleepy flow.png")
+              : require("../../assets/images/icon.png")
+            }
+            style={{ width: 160, height: 160, marginLeft: -30, zIndex: 1 }}
+            resizeMode="contain"
+          />
+        </View>
+        <View 
+          style={{ 
+            flex: 1, 
+            backgroundColor: bubbleBg,
+            marginLeft: 0,
+            padding: 16,
+            borderRadius: 28,
+            borderWidth: 1,
+            borderColor: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
+            shadowColor: isDark ? (isWhiteTheme ? "#000" : "#888") : "#000",
+            shadowOffset: { width: 0, height: 12 },
+            shadowOpacity: isDark ? (isWhiteTheme ? 0.1 : 0.25) : 0.15,
+            shadowRadius: 16,
+            elevation: 15,
+            position: "relative",
+            zIndex: 2,
+            marginBottom: 10
+          }}
+        >
+          {/* Rotated Square Tail */}
+          <View 
+            style={{ 
+              position: "absolute", 
+              left: -8, 
+              top: "40%", 
+              width: 16,
+              height: 16,
+              backgroundColor: isDark ? (isWhiteTheme ? "#fff" : "rgba(45,45,50,1)") : "white",
+              transform: [{ rotate: "45deg" }],
+              borderLeftWidth: 1,
+              borderBottomWidth: 1,
+              borderColor: isDark ? (isWhiteTheme ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.1)") : "rgba(0,0,0,0.05)",
+              zIndex: -1
+            }} 
+          />
+          <Text className={`text-[13px] ${isWhiteTheme && isDark ? "text-klowk-black" : "text-klowk-black dark:text-white"} font-bold leading-5`}>
+            {bubbleText}
+          </Text>
         </View>
       </View>
-    </View>
+    </LinearGradient>
   );
 }

@@ -1,38 +1,32 @@
 import AnalyticsRow from "@/components/analytics/AnalyticsRow";
 import BentoCards from "@/components/home/BentoCards";
 import GreetingSection from "@/components/home/GreetingSection";
-import HomeHeader from "@/components/home/HomeHeader";
 import QuickActions from "@/components/home/QuickActions";
 import RecentLogs from "@/components/home/RecentLogs";
 import SummaryPage from "@/components/log/SummaryPage";
-import { loadStreakMode, StreakMode } from "@/components/sheets/StreakModal";
 import { useSummaryVisible } from "@/context/SummaryVisibleContext";
 import { Activity, Category, useTracking } from "@/context/TrackingContext";
 import { getForecast } from "@/utils/forecast";
 import { mergePomoActivities } from "@/utils/pomodoroMerge";
-import { computeStreak } from "@/utils/streak";
+import { useAppTheme } from "@/context/ThemeContext";
 import { useColorScheme } from "nativewind";
-import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Dimensions, ScrollView } from "react-native";
+import React, { useCallback, useRef, useState } from "react";
+import { Dimensions, ScrollView, View, StyleSheet } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { LinearGradient } from "expo-linear-gradient";
 
 export default React.memo(function TabOneScreen() {
   const { activities, deleteActivity, duplicateActivity, categories, customGoals } = useTracking();
+  const { accentColor } = useAppTheme();
   const { setIsSummaryVisible } = useSummaryVisible();
   const { colorScheme } = useColorScheme();
   const [timeRange, setTimeRange] = useState<"today" | "week" | "month">("today");
-  const [streakMode, setStreakMode] = useState<StreakMode>("logging");
-
-  useEffect(() => {
-    loadStreakMode().then(setStreakMode);
-  }, []);
   const now = new Date();
 
   const getPeriodTotal = useCallback((range: "today" | "week" | "month", offset: number = 0) => {
     const ref = new Date(now);
     const startOfRange = new Date(ref);
     const endOfRange = new Date(ref);
-
     if (range === "today") {
       startOfRange.setDate(ref.getDate() + offset);
       startOfRange.setHours(0, 0, 0, 0);
@@ -50,13 +44,10 @@ export default React.memo(function TabOneScreen() {
       endOfRange.setMonth(ref.getMonth() + offset + 1, 0);
       endOfRange.setHours(23, 59, 59, 999);
     }
-
-    return activities
-      .filter((a: Activity) => {
+    return activities.filter((a: Activity) => {
         const t = new Date(a.start_time).getTime();
         return t >= startOfRange.getTime() && t <= endOfRange.getTime();
-      })
-      .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
+      }).reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
   }, [activities]);
 
   const rangeMinsTotal = React.useMemo(() => getPeriodTotal(timeRange, 0), [timeRange, activities]);
@@ -78,57 +69,44 @@ export default React.memo(function TabOneScreen() {
       d.setHours(0, 0, 0, 0);
       d.setDate(d.getDate() - d.getDay() + i);
       const dayStr = d.toDateString();
-      const label = d.toLocaleDateString("en-US", { weekday: "narrow" });
       const mins = activities
         .filter((a: Activity) => new Date(a.start_time).toDateString() === dayStr)
         .reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
-      return { mins, label, isToday: dayStr === now.toDateString() };
+      return { mins, label: d.toLocaleDateString("en-US", { weekday: "narrow" }), isToday: dayStr === now.toDateString() };
     }),
     [activities],
   );
 
   const { dayOfWeek, dayOfMonth, greetingKey } = React.useMemo(() => {
     const d = new Date();
-    const w = d.toLocaleDateString(undefined, { weekday: "long" });
-    const m = d.toLocaleDateString(undefined, { day: "numeric", month: "long" });
     let gk = "good_evening";
     if (d.getHours() < 12) gk = "good_morning";
     else if (d.getHours() < 17) gk = "good_afternoon";
-    return { dayOfWeek: w, dayOfMonth: m, greetingKey: gk };
+    return { 
+      dayOfWeek: d.toLocaleDateString(undefined, { weekday: "long" }), 
+      dayOfMonth: d.toLocaleDateString(undefined, { day: "numeric", month: "long" }), 
+      greetingKey: gk 
+    };
   }, []);
 
-  const maxWeeklyMins = React.useMemo(
-    () => Math.max(...dailyChartData.map((d) => d.mins), 1),
-    [dailyChartData],
-  );
-
+  const maxWeeklyMins = React.useMemo(() => Math.max(...dailyChartData.map((d) => d.mins), 1), [dailyChartData]);
   const recentLogs = React.useMemo(() => mergePomoActivities(activities).slice(0, 5), [activities]);
-
   const categoryStats = React.useMemo(() => {
     const total = activities.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
-    return categories
-      .map((cat: Category) => {
+    return categories.map((cat: Category) => {
         const logs = activities.filter((a: Activity) => a.category === cat.id);
-        const totalMins = logs.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0);
-        return { ...cat, totalMins, sessionCount: logs.length, totalAll: total };
-      })
-      .filter((c: any) => c.totalMins > 0)
-      .sort((a: any, b: any) => b.totalMins - a.totalMins);
+        return { ...cat, totalMins: logs.reduce((sum: number, a: Activity) => sum + (a.duration || 0), 0), sessionCount: logs.length, totalAll: total };
+      }).filter((c: any) => c.totalMins > 0).sort((a: any, b: any) => b.totalMins - a.totalMins);
   }, [activities, categories]);
 
   const activeGoalsCount = customGoals?.filter((g) => g.endDate >= Date.now()).length ?? 0;
-
-  const klowkForecast = React.useMemo(
-    () => getForecast({ activities, goals: customGoals || [], range: "week" }),
-    [activities, customGoals],
-  );
-
-  const streak = React.useMemo(
-    () => streakMode === "off" ? 0 : computeStreak(activities),
-    [activities, streakMode],
-  );
-  const { width, height } = Dimensions.get("window");
+  const klowkForecast = React.useMemo(() => getForecast({ activities, goals: customGoals || [], range: "week" }), [activities, customGoals]);
+  const { width } = Dimensions.get("window");
   const pagerRef = useRef<ScrollView>(null);
+
+  const isDark = colorScheme === "dark";
+
+  const isWhiteTheme = accentColor.toLowerCase().trim() === "#ffffff" || accentColor.toLowerCase().trim() === "#fff";
 
   return (
     <ScrollView
@@ -139,24 +117,23 @@ export default React.memo(function TabOneScreen() {
       bounces={false}
       style={{ flex: 1 }}
       contentOffset={{ x: width, y: 0 }}
-      onLayout={() => {
-        // Ensure we are at the right position on layout
-        pagerRef.current?.scrollTo({ x: width, y: 0, animated: false });
-      }}
+      onLayout={() => pagerRef.current?.scrollTo({ x: width, y: 0, animated: false })}
       onMomentumScrollEnd={(e) => {
         const page = Math.round(e.nativeEvent.contentOffset.x / width);
         setIsSummaryVisible(page === 0);
       }}
       scrollEventThrottle={16}
     >
-      {/* Page 0 — Summary (swipe left to reveal) */}
       <SummaryPage activities={activities} categories={categories} width={width} />
 
-      {/* Page 1 — Home (default) */}
-      <SafeAreaView style={{ width }} className="bg-white dark:bg-klowk-black" edges={["top"]}>
+      <View style={{ width, backgroundColor: isDark ? (isWhiteTheme ? "#FFFFFF" : "#0A0A0A") : "#F1F3F1" }}>
+        {isWhiteTheme && isDark && (
+          <LinearGradient
+            colors={["#FFFFFF", "#E2E8F0"]}
+            style={StyleSheet.absoluteFill}
+          />
+        )}
         <ScrollView showsVerticalScrollIndicator={false} className="flex-1">
-          <HomeHeader streak={streak} onStreakSaved={() => loadStreakMode().then(setStreakMode)} />
-
           <GreetingSection
             klowkForecastStatus={klowkForecast.status}
             klowkForecastMessage={klowkForecast.message}
@@ -166,39 +143,55 @@ export default React.memo(function TabOneScreen() {
             greetingKey={greetingKey}
           />
 
-          {activities.length <= 1 && <QuickActions />}
+          {/* Content Sheet with rounded top corners */}
+          <View 
+            style={{ 
+              marginTop: -60, 
+              borderTopLeftRadius: 36, 
+              borderTopRightRadius: 36, 
+              backgroundColor: isDark ? "#121212" : "#FFFFFF",
+              paddingTop: 32,
+              minHeight: 600,
+              shadowColor: isDark ? "#888" : "#000",
+              shadowOffset: { width: 0, height: -10 },
+              shadowOpacity: isDark ? 0.1 : 0.05,
+              shadowRadius: 10,
+              elevation: 5
+            }}
+          >
+            {activities.length <= 1 && <QuickActions />}
 
-          {activities.length > 0 && (
-            <>
-              <AnalyticsRow
-                dailyChartData={dailyChartData}
-                maxWeeklyMins={maxWeeklyMins}
-                rangeMinsTotal={rangeMinsTotal}
-                trendUp={trendUp}
-                isNeutral={isNeutral}
-                trendColor={trendColor}
-                timeRange={timeRange}
-                setTimeRange={setTimeRange}
-              />
-
-              <BentoCards
-                categoryStats={categoryStats}
-                activeGoalsCount={activeGoalsCount}
-                customGoals={customGoals || []}
-                activities={activities}
-              />
-
-              <RecentLogs
-                recentLogs={recentLogs}
-                categories={categories}
-                customGoals={customGoals || []}
-                deleteActivity={deleteActivity}
-                duplicateActivity={duplicateActivity}
-              />
-            </>
-          )}
+            {activities.length > 0 && (
+              <>
+                <AnalyticsRow
+                  dailyChartData={dailyChartData}
+                  maxWeeklyMins={maxWeeklyMins}
+                  rangeMinsTotal={rangeMinsTotal}
+                  trendUp={trendUp}
+                  isNeutral={isNeutral}
+                  trendColor={trendColor}
+                  timeRange={timeRange}
+                  setTimeRange={setTimeRange}
+                />
+                <BentoCards
+                  categoryStats={categoryStats}
+                  activeGoalsCount={activeGoalsCount}
+                  customGoals={customGoals || []}
+                  activities={activities}
+                />
+                <RecentLogs
+                  recentLogs={recentLogs}
+                  categories={categories}
+                  customGoals={customGoals || []}
+                  deleteActivity={deleteActivity}
+                  duplicateActivity={duplicateActivity}
+                />
+              </>
+            )}
+            <View style={{ height: 120 }} />
+          </View>
         </ScrollView>
-      </SafeAreaView>
+      </View>
     </ScrollView>
   );
 });

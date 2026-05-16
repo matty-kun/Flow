@@ -205,7 +205,7 @@ export default function TestLogScreen() {
             <View className="items-center mb-8">
               <Image
                 source={require("../../assets/images/klowk reading.png")}
-                style={{ width: 180, height: 180 }}
+                style={{ width: 240, height: 240 }}
                 contentFit="contain"
               />
             </View>
@@ -324,10 +324,10 @@ export default function TestLogScreen() {
             <Pressable
               onPress={handleContinue}
               style={{ backgroundColor: result?.type === "manual" ? accentColor : undefined }}
-              className={`mt-2 py-4 px-6 rounded-[20px] w-full items-center justify-center ${result?.type === "manual" ? "" : "bg-transparent border border-gray-200 dark:border-zinc-700"}`}
+              className={`mt-2 py-12 rounded-full w-full items-center justify-center ${result?.type === "manual" ? "" : "bg-transparent border border-gray-200 dark:border-zinc-700"}`}
             >
               <Text
-                className={`text-sm font-black tracking-wider ${result?.type === "manual" ? "text-white" : "text-gray-400 dark:text-zinc-500"}`}
+                className={`text-lg font-black uppercase tracking-[2px] ${result?.type === "manual" ? "text-white" : "text-gray-400 dark:text-zinc-500"}`}
               >
                 {result?.type === "manual" ? "Next →" : "Skip for now →"}
               </Text>

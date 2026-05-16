@@ -1,8 +1,8 @@
-import { useTracking } from "@/context/TrackingContext";
 import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
+import { useTracking } from "@/context/TrackingContext";
+import { impact, notification } from "@/utils/haptics";
 import { sendLocalNotification } from "@/utils/notifications";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
-import { impact, notification } from "@/utils/haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { useColorScheme } from "nativewind";
@@ -19,8 +19,7 @@ import Animated, {
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
-  withSpring,
-  withTiming,
+  withSpring
 } from "react-native-reanimated";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
@@ -76,7 +75,7 @@ export default function FloatingTimer() {
         const target = currentActivity.target_duration;
         if (target && !hasAlerted.current && secs >= target) {
           hasAlerted.current = true;
-          notification(NotificationFeedbackType.Success);
+          // notification(NotificationFeedbackType.Success);
           sendLocalNotification(
             "Time's up! ⏱",
             `You completed "${currentActivity.title}". Great work!`,
@@ -194,7 +193,7 @@ export default function FloatingTimer() {
         }}
       >
         <Image
-          source={require("../../assets/images/focus klowk.png")}
+          source={require("../../assets/images/focus flow.png")}
           style={{ width: 28, height: 28, marginRight: 8 }}
           contentFit="contain"
         />

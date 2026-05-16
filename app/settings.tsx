@@ -1,6 +1,7 @@
 import { FLOW_FACEBOOK_COMMUNITY_URL, FLOW_WEBSITE_URL } from "@/constants/ExternalLinks";
 import { useLanguage } from "@/context/LanguageContext";
-import { getContrastingColor, PRESET_COLORS, useAppTheme } from "@/context/ThemeContext";
+import { getContrastingColor, PRESET_COLORS, useAppTheme, getFilteredColors } from "@/context/ThemeContext";
+import { LinearGradient } from "expo-linear-gradient";
 import { useTracking } from "@/context/TrackingContext";
 import { getHapticsEnabled, setHapticsEnabled } from "@/utils/haptics";
 import * as Haptics from "expo-haptics";
@@ -11,6 +12,7 @@ import {
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
+import { useOnboarding } from "@/context/OnboardingContext";
 import {
   Bell,
   ChevronLeft,
@@ -107,6 +109,7 @@ export default function SettingsScreen() {
   const { language, setLanguage, t } = useLanguage();
   const { activities } = useTracking();
   const { accentColor, setAccentColor } = useAppTheme();
+  const { resetOnboarding } = useOnboarding();
   const isDark = colorScheme === "dark";
 
   const [haptics, setLocalHaptics] = useState(getHapticsEnabled());
@@ -244,7 +247,7 @@ export default function SettingsScreen() {
             </View>
           </View>
           <View className="px-4 pb-4 flex-row flex-wrap gap-3">
-            {PRESET_COLORS.map((preset) => {
+            {getFilteredColors(isDark).map((preset) => {
               const isSelected = accentColor === preset.value;
               return (
                 <Pressable
@@ -254,14 +257,32 @@ export default function SettingsScreen() {
                     width: 44,
                     height: 44,
                     borderRadius: 22,
-                    backgroundColor: getContrastingColor(preset.value, isDark),
                     alignItems: "center",
                     justifyContent: "center",
                     borderWidth: isSelected ? 3 : 0,
                     borderColor: isSelected ? (colorScheme === "dark" ? "#fff" : "#18181b") : "transparent",
+                    overflow: 'hidden'
                   }}
                 >
-                  {isSelected && <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colorScheme === "dark" ? "#18181b" : "#fff" }} />}
+                  {preset.id === "white" ? (
+                    <LinearGradient
+                      colors={["#FFFFFF", "#E2E8F0"]}
+                      style={{ flex: 1, width: '100%', height: '100%' }}
+                    />
+                  ) : (
+                    <View style={{ flex: 1, width: '100%', height: '100%', backgroundColor: getContrastingColor(preset.value, isDark) }} />
+                  )}
+                  {isSelected && (
+                    <View 
+                      style={{ 
+                        position: 'absolute',
+                        width: 8, 
+                        height: 8, 
+                        borderRadius: 4, 
+                        backgroundColor: colorScheme === "dark" ? "#18181b" : "#fff" 
+                      }} 
+                    />
+                  )}
                 </Pressable>
               );
             })}
@@ -271,6 +292,33 @@ export default function SettingsScreen() {
         {/* QUICK ACTIONS */}
         <SectionTitle title="quick_actions" />
         <Card>
+          <View className="flex-row p-4 items-center justify-between border-b border-zinc-100 dark:border-white/5">
+            <View className="flex-row flex-1 items-start pr-4">
+              <IconWrapper icon={<Smartphone size={18} color={accentColor} />} accentColor={accentColor} />
+              <View className="flex-1 ml-3">
+                <Text className="text-base font-medium text-zinc-900 dark:text-white">Redo Onboarding</Text>
+                <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Restart the initial setup flow to change your name or goals.</Text>
+              </View>
+            </View>
+            <Pressable 
+              onPress={async () => {
+                Alert.alert("Restart Onboarding?", "This will reset your name and goals, but your focus logs will be kept.", [
+                  { text: "Cancel", style: "cancel" },
+                  { 
+                    text: "Restart", 
+                    onPress: async () => {
+                      await resetOnboarding();
+                      router.replace("/onboarding/handshake");
+                    }
+                  }
+                ]);
+              }}
+              className="p-2"
+            >
+              <RotateCcw size={20} color={accentColor} />
+            </Pressable>
+          </View>
+
           <View className="flex-row p-4 items-center justify-between">
             <View className="flex-1 pr-4">
               <Text className="text-base font-medium text-zinc-900 dark:text-white">{t("shake_undo")}</Text>
