@@ -4,12 +4,10 @@ import {
   BarChart3,
   Bell,
   ChevronLeft,
-  ClipboardList,
   Home,
   MessageCircle,
-  RotateCcw,
+  Smartphone,
   Target,
-  Timer,
 } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
 import React from "react";
@@ -22,16 +20,6 @@ const sections = [
     icon: Home,
     title: "Home",
     body: "Your daily dashboard. See today's total focus time, your current streak, recent sessions, and quick-start shortcuts — all at a glance.",
-  },
-  {
-    icon: Timer,
-    title: "Live Session",
-    body: "Tap the + button to start a timed focus session. Set a category, an optional goal duration, and go. The floating bubble keeps the timer visible while you use other apps.",
-  },
-  {
-    icon: ClipboardList,
-    title: "Manual Log",
-    body: "Forgot to start the timer? Long-press + and choose 'Log manually' to add a past session by entering the start time, end time, and category.",
   },
   {
     icon: Target,
@@ -49,9 +37,9 @@ const sections = [
     body: "Your built-in AI productivity coach. Ask Flow for advice, session summaries, habit insights, or just to think out loud about your work.",
   },
   {
-    icon: RotateCcw,
-    title: "Shake to Undo",
-    body: "Just logged a session by mistake? Shake your phone within a few seconds to instantly undo the last entry — no menus needed.",
+    icon: Smartphone,
+    title: "Flip to Focus",
+    body: "Ready for deep work? With the app open, lay your phone upside down (face down) on your desk. Flow instantly triggers a distraction-free focus timer. Flip it back over to pause or finish.",
   },
   {
     icon: Bell,
@@ -231,100 +219,11 @@ export default function HelpGuideScreen() {
                 <Text
                   style={{ fontSize: 9, fontWeight: "700", color: accentColor, letterSpacing: 0.5 }}
                 >
-                  8 SECTIONS BELOW
+                  6 SECTIONS BELOW
                 </Text>
               </View>
             </View>
           </View>
-        </View>
-
-        {/* Start Here tip */}
-        <View style={{ paddingHorizontal: 16, marginTop: 20, marginBottom: 8 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "700",
-              color: accentColor,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              marginLeft: 4,
-            }}
-          >
-            Start Here
-          </Text>
-        </View>
-
-        <View style={{ paddingHorizontal: 16, marginBottom: 6 }}>
-          <View
-            style={{
-              backgroundColor: cardBg,
-              borderRadius: 20,
-              borderWidth: 1,
-              borderColor: border,
-              paddingHorizontal: 20,
-              paddingVertical: 16,
-            }}
-          >
-            {[
-              "1. Set up your first session — tap the big + button.",
-              "2. Track your time with the live timer, or log past sessions manually.",
-              "3. Open Reports to see your weekly patterns and streaks.",
-            ].map((step, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: "row",
-                  alignItems: "flex-start",
-                  marginBottom: i < 2 ? 12 : 0,
-                }}
-              >
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: accentColor + "1E",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginRight: 10,
-                    marginTop: 1,
-                    flexShrink: 0,
-                  }}
-                >
-                  <Text style={{ fontSize: 11, fontWeight: "800", color: accentColor }}>
-                    {i + 1}
-                  </Text>
-                </View>
-                <Text
-                  style={{
-                    flex: 1,
-                    fontSize: 13,
-                    lineHeight: 20,
-                    color: isDark ? "#d4d4d8" : "#3f3f46",
-                    fontWeight: "500",
-                  }}
-                >
-                  {step.slice(3)}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Section label */}
-        <View style={{ paddingHorizontal: 16, marginTop: 20, marginBottom: 8 }}>
-          <Text
-            style={{
-              fontSize: 11,
-              fontWeight: "700",
-              color: accentColor,
-              letterSpacing: 1.5,
-              textTransform: "uppercase",
-              marginLeft: 4,
-            }}
-          >
-            All Features
-          </Text>
         </View>
 
         {/* Section Cards */}

@@ -13,6 +13,7 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import Constants from "expo-constants";
 import { useRouter } from "expo-router";
 import { useOnboarding } from "@/context/OnboardingContext";
+import * as Notifications from "expo-notifications";
 import {
   Bell,
   ChevronLeft,
@@ -26,11 +27,12 @@ import {
   Smartphone,
   Sun,
   Trash2,
+  Zap,
 } from "lucide-react-native";
 import FontAwesome from "@expo/vector-icons/FontAwesome";
 import { Image } from "expo-image";
 import { useColorScheme } from "nativewind";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Alert, Linking, Pressable, ScrollView, Switch, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -114,6 +116,22 @@ export default function SettingsScreen() {
 
   const [haptics, setLocalHaptics] = useState(getHapticsEnabled());
   const [shakeUndo, setLocalShakeUndo] = useState(getShakeUndoEnabled());
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+
+  useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }) => {
+      setNotificationsEnabled(status === "granted");
+    });
+  }, []);
+
+  const handleToggleNotifications = async (val: boolean) => {
+    if (val) {
+      const { status } = await Notifications.requestPermissionsAsync();
+      setNotificationsEnabled(status === "granted");
+    } else {
+      setNotificationsEnabled(false);
+    }
+  };
 
   const handleToggleTheme = (next: "light" | "dark" | "system") => {
     if (next === "system") return; 
@@ -124,8 +142,6 @@ export default function SettingsScreen() {
   const handleToggleHaptics = (val: boolean) => {
     setLocalHaptics(val);
     void setHapticsEnabled(val);
-    // Always fire haptic feedback when toggling — even when turning it ON
-    // (bypassing the enabled guard since _enabled hasn't updated yet)
     void Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
   };
 
@@ -193,12 +209,28 @@ export default function SettingsScreen() {
         {/* PREFERENCES */}
         <SectionTitle title="appearance_stats" />
         <Card>
-          <View className="flex-row p-4 items-center justify-between">
+          <View className="flex-row p-4 items-center justify-between border-b border-zinc-100 dark:border-white/5">
             <View className="flex-row flex-1 items-start pr-4">
               <IconWrapper icon={<Bell size={18} color={accentColor} />} accentColor={accentColor} />
               <View className="flex-1 ml-3">
                 <Text className="text-base font-medium text-zinc-900 dark:text-white">{t("push_notifications")}</Text>
                 <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">{t("notifications_desc")}</Text>
+              </View>
+            </View>
+            <Switch 
+              value={notificationsEnabled} 
+              onValueChange={handleToggleNotifications} 
+              trackColor={{ false: '#d4d4d8', true: getContrastingColor(accentColor, isDark) }} 
+              thumbColor={notificationsEnabled ? '#ffffff' : '#f4f4f5'}
+            />
+          </View>
+
+          <View className="flex-row p-4 items-center justify-between">
+            <View className="flex-row flex-1 items-start pr-4">
+              <IconWrapper icon={<Zap size={18} color={accentColor} />} accentColor={accentColor} />
+              <View className="flex-1 ml-3">
+                <Text className="text-base font-medium text-zinc-900 dark:text-white">Haptic Feedback</Text>
+                <Text className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">Tactile vibration responses when interacting with buttons and timers.</Text>
               </View>
             </View>
             <Switch 

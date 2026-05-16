@@ -18,6 +18,10 @@ export const PRESET_COLORS: PresetColor[] = [
   { id: "sky", name: "Sky", value: "#0ea5e9" },
   { id: "orange", name: "Orange", value: "#f97316" },
   { id: "brown", name: "Brown", value: "#78350f" },
+  { id: "cyan", name: "Cyan", value: "#06b6d4" },
+  { id: "lime", name: "Lime", value: "#84cc16" },
+  { id: "fuchsia", name: "Fuchsia", value: "#d946ef" },
+  { id: "crimson", name: "Crimson", value: "#be123c" },
   { id: "white", name: "White", value: "#FFFFFF" }, // Uses gradient in UI
   { id: "black", name: "Black", value: "#18181b" },
 ];

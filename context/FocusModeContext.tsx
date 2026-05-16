@@ -77,8 +77,18 @@ export function FocusModeProvider({ children }: { children: React.ReactNode }) {
     return () => subscription?.remove();
   }, [isSensorEnabled]);
 
+  const handleSetIsSensorEnabled = (val: boolean) => {
+    setIsSensorEnabled(val);
+    if (val) {
+      notification(NotificationFeedbackType.Success);
+      impact(ImpactFeedbackStyle.Heavy);
+    } else {
+      impact(ImpactFeedbackStyle.Medium);
+    }
+  };
+
   return (
-    <FocusModeContext.Provider value={{ isSensorEnabled, setIsSensorEnabled, isFaceUp }}>
+    <FocusModeContext.Provider value={{ isSensorEnabled, setIsSensorEnabled: handleSetIsSensorEnabled, isFaceUp }}>
       {children}
     </FocusModeContext.Provider>
   );

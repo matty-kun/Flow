@@ -8,8 +8,9 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import { BarChart3, Home, History as HistoryIcon, Target } from "lucide-react-native";
 import { useColorScheme } from "nativewind";
-import React from "react";
+import React, { useEffect, useRef } from "react";
 import {
+    Animated,
     Dimensions,
     Pressable,
     Text,
@@ -34,9 +35,18 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   const router = useRouter();
   const { isSummaryVisible } = useSummaryVisible();
 
-  // Hide the navbar when in the Chat tab as requested
   const currentRouteName = state.routes[state.index].name;
-  if (currentRouteName === "chat") return null;
+  const isHidden = isSummaryVisible || currentRouteName === "chat";
+  const translateYAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(translateYAnim, {
+      toValue: isHidden ? 150 : 0,
+      useNativeDriver: true,
+      friction: 9,
+      tension: 60,
+    }).start();
+  }, [isHidden]);
 
   const renderTab = (route: any, index: number) => {
     const isFocused = state.index === index;
@@ -98,7 +108,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
   };
 
   return (
-    <View
+    <Animated.View
       style={{
         position: "absolute",
         bottom: 24,
@@ -120,8 +130,8 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
         shadowRadius: 15,
         elevation: 8,
         zIndex: 1000,
-        opacity: isSummaryVisible ? 0 : 1,
-        pointerEvents: isSummaryVisible ? "none" : "auto",
+        transform: [{ translateY: translateYAnim }],
+        pointerEvents: isHidden ? "none" : "auto",
         paddingHorizontal: 10,
       }}
     >
@@ -163,7 +173,7 @@ function CustomTabBar({ state, descriptors, navigation }: any) {
       {/* Goals & Reports */}
       {renderTab(state.routes[3], 3)}
       {renderTab(state.routes[4], 4)}
-    </View>
+    </Animated.View>
   );
 }
 
