@@ -73,12 +73,28 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
   const isCurrentMonth =
     new Date().getFullYear() === year && new Date().getMonth() === monthIndex;
 
+  const baseColor = getContrastingColor(accentColor, isDark);
+  const isBaseLight = baseColor === "#FFFFFF" || baseColor.toLowerCase() === "#fbbf24" || baseColor.toLowerCase() === "#84cc16";
+
   function intensityColor(minutes: number): string {
     if (minutes === 0) return isDark ? "#27272a" : "#f3f4f6";
     const ratio = Math.min(minutes / maxMinutes, 1);
     const opacity = 0.18 + ratio * 0.82;
-    const baseColor = getContrastingColor(accentColor, isDark);
     return `${baseColor}${Math.round(opacity * 255).toString(16).padStart(2, '0')}`;
+  }
+
+  function getCellTextColor(mins: number): string {
+    if (mins === 0) return isDark ? "#52525b" : "#d1d5db";
+    if (!isBaseLight) return "#FFFFFF";
+
+    const ratio = Math.min(mins / maxMinutes, 1);
+    const opacity = 0.18 + ratio * 0.82;
+
+    if (isDark) {
+      return opacity >= 0.55 ? "#121212" : "#FFFFFF";
+    } else {
+      return "#121212";
+    }
   }
 
   return (
@@ -97,7 +113,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
             const todayBorderColor = (accentColor === "#FFFFFF") ? (isDark ? "rgba(255,255,255,0.5)" : "rgba(18,18,18,0.3)") : `${highlightColor}80`;
 
             return (
-              <Pressable
+               <Pressable
                 key={cell.key}
                 onPress={() => onSelectDay(isSelected ? null : ymd)}
                 style={{
@@ -116,12 +132,7 @@ function HeatmapGrid({ month, activities, selectedDay, onSelectDay, isDark, acce
                   style={{
                     fontSize: 9,
                     fontWeight: isToday ? "900" : "600",
-                    color:
-                      mins > 0
-                        ? ((accentColor === "#FFFFFF" && !isDark) ? "#121212" : (accentColor === "#18181b" && isDark ? "#18181b" : "#FFFFFF"))
-                        : isDark
-                        ? "#52525b"
-                        : "#d1d5db",
+                    color: getCellTextColor(mins),
                   }}
                 >
                   {cell.day}

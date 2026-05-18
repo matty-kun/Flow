@@ -80,8 +80,18 @@ export default function SummaryPage({ activities, categories, width }: Props) {
   const { accentColor } = useAppTheme();
   const [period, setPeriod] = useState<Period>("today");
 
-  // Determine if the background (accentColor) is dark to adjust text colors
-  const isAccentDark = (accentColor !== "#FFFFFF") && (accentColor === "#18181b" || accentColor === "#6366f1" || accentColor === "#8b5cf6" || accentColor === "#f43f5e");
+  // Determine if the background (accentColor) is dark using relative luminance
+  const isAccentDark = useMemo(() => {
+    if (!accentColor || accentColor === "#FFFFFF") return false;
+    if (accentColor === "#18181b" || accentColor === "#000000") return true;
+    const clean = accentColor.replace("#", "");
+    const rgb = parseInt(clean, 16);
+    const r = (rgb >> 16) & 0xff;
+    const g = (rgb >> 8) & 0xff;
+    const b = (rgb >> 0) & 0xff;
+    const luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    return luma < 160;
+  }, [accentColor]);
   
   const TEXT = isAccentDark ? "#FFFFFF" : "#121212";
   const TEXT_SUB = isAccentDark ? "rgba(255,255,255,0.7)" : "rgba(18,18,18,0.5)";

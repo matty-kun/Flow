@@ -28,6 +28,7 @@ export interface CustomGoal {
   categoryId: string;
   startDate: number;
   endDate: number;
+  recurring?: "daily" | "weekly" | "monthly" | "none";
 }
 
 export type Activity = {
@@ -89,6 +90,34 @@ const TrackingContext = createContext<TrackingContextType | null>(null);
 const GOALS_STORAGE_KEY = "klowk_goals_v1";
 const CATEGORIES_STORAGE_KEY = "klowk_categories_v1";
 
+export function getRecurringWindow(recurring: "daily" | "weekly" | "monthly" | "none", nowTs = Date.now()): { startDate: number; endDate: number } | null {
+  if (!recurring || recurring === "none") return null;
+  const now = new Date(nowTs);
+  if (recurring === "daily") {
+    const start = new Date(now);
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start.getTime(), endDate: end.getTime() };
+  }
+  if (recurring === "weekly") {
+    const day = now.getDay();
+    const diff = now.getDate() - day + (day === 0 ? -6 : 1);
+    const start = new Date(now.setDate(diff));
+    start.setHours(0, 0, 0, 0);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    end.setHours(23, 59, 59, 999);
+    return { startDate: start.getTime(), endDate: end.getTime() };
+  }
+  if (recurring === "monthly") {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59, 999);
+    return { startDate: start.getTime(), endDate: end.getTime() };
+  }
+  return null;
+}
+
 export function TrackingProvider({ children }: { children: ReactNode }) {
   const db = useSQLiteContext();
   const [activities, setActivities] = useState<Activity[]>([]);
@@ -144,7 +173,20 @@ export function TrackingProvider({ children }: { children: ReactNode }) {
     const loadGoals = async () => {
       try {
         const saved = await AsyncStorage.getItem(GOALS_STORAGE_KEY);
-        if (saved) setCustomGoals(JSON.parse(saved));
+        if (saved) {
+          const loadedGoals: CustomGoal[] = JSON.parse(saved);
+          const nowTs = Date.now();
+          const updatedGoals = loadedGoals.map((g) => {
+            if (g.recurring && g.recurring !== "none" && nowTs > g.endDate) {
+              const win = getRecurringWindow(g.recurring, nowTs);
+              if (win) {
+                return { ...g, startDate: win.startDate, endDate: win.endDate };
+              }
+            }
+            return g;
+          });
+          setCustomGoals(updatedGoals);
+        }
       } catch (e) {
         console.error("Failed to load goals", e);
       } finally {

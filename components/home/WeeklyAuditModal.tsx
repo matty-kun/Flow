@@ -139,7 +139,7 @@ export default function WeeklyAuditModal() {
   const CHIPS = [
     { label: "Burnout / Low Energy", icon: Zap, color: "#f59e0b" },
     { label: "Unexpected Distractions", icon: AlertCircle, color: "#ef4444" },
-    { label: "Blocked by Code / Tech", icon: ShieldAlert, color: "#3b82f6" },
+    { label: "External Roadblocks & Delays", icon: ShieldAlert, color: "#3b82f6" },
     { label: "Overambitious Target", icon: TrendingUp, color: "#8b5cf6" },
   ];
 

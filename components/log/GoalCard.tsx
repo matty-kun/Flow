@@ -17,6 +17,7 @@ type Props = {
     categoryId: string;
     startDate: number;
     endDate: number;
+    recurring?: "daily" | "weekly" | "monthly" | "none";
   };
   catData: Category;
   currentMins: number;
@@ -36,6 +37,8 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
     mins < 60 ? `${mins}m` : `${(mins / 60).toFixed(1).replace(".0", "")}h`;
   const pct = Math.min(100, (currentMins / goal.targetMins) * 100) || 0;
   const isCompleted = pct >= 100;
+
+  const freqLabel = goal.recurring === "daily" ? "Day" : goal.recurring === "monthly" ? "Month" : goal.recurring === "none" ? "Total" : "Week";
 
   return (
     <MotiView
@@ -74,7 +77,7 @@ export default function GoalCard({ goal, catData, currentMins, index = 0, isRece
                 className="w-2 h-2 rounded-full mr-2" 
               />
               <Text className="text-[10px] font-black uppercase tracking-widest text-gray-400">
-                {formatTime(goal.targetMins)} / Week
+                {formatTime(goal.targetMins)} / {freqLabel}
               </Text>
             </View>
           </View>

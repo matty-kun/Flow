@@ -19,6 +19,7 @@ import WheelPicker from "@/components/forms/WheelPicker";
 import {
   Calendar as CalendarIcon,
   Edit2,
+  MoreHorizontal,
   Plus,
   Target,
   Trash2,
@@ -364,10 +365,10 @@ const now = Date.now();
                       </View>
                       <Pressable
                         onPress={() => setSelectedActionGoalId(goal.id)}
-                        className="w-8 h-8 items-center justify-center"
+                        className="w-8 h-8 items-center justify-center ml-2"
                         hitSlop={12}
                       >
-                        <X size={16} color={isDark ? "#52525b" : "#9ca3af"} />
+                        <MoreHorizontal size={20} color={isDark ? "#52525b" : "#9ca3af"} />
                       </Pressable>
                     </View>
                   </MotiView>
@@ -415,6 +416,13 @@ const now = Date.now();
                         {achieved ? "✓ Done" : `${pct}%`}
                       </Text>
                     </View>
+                    <Pressable
+                      onPress={() => setSelectedActionGoalId(goal.id)}
+                      className="p-2 -mr-1 ml-1 items-center justify-center"
+                      hitSlop={12}
+                    >
+                      <MoreHorizontal size={20} color={isDark ? "#52525b" : "#9ca3af"} />
+                    </Pressable>
                   </View>
                 );
               })}

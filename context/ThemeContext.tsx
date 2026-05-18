@@ -1,5 +1,6 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { useColorScheme } from "nativewind";
 
 export type PresetColor = {
   id: string;
@@ -49,16 +50,34 @@ const ThemeContext = createContext<ThemeContextType>({
 export function AppThemeProvider({ children }: { children: React.ReactNode }) {
   const [accentColor, setAccentColorState] = useState<string>(PRESET_COLORS[0].value);
   const [isLoading, setIsLoading] = useState(true);
+  const { colorScheme } = useColorScheme();
+  const isDark = colorScheme === "dark";
 
   useEffect(() => {
     loadColor();
   }, []);
 
+  useEffect(() => {
+    if (!isLoading) {
+      if (!isDark && accentColor.toUpperCase() === "#FFFFFF") {
+        setAccentColor("#18181b");
+      } else if (isDark && accentColor.toLowerCase() === "#18181b") {
+        setAccentColor("#FFFFFF");
+      }
+    }
+  }, [isDark, isLoading, accentColor]);
+
   const loadColor = async () => {
     try {
       const saved = await AsyncStorage.getItem("flow_accent_color");
       if (saved) {
-        setAccentColorState(saved);
+        if (!isDark && saved.toUpperCase() === "#FFFFFF") {
+          setAccentColorState("#18181b");
+        } else if (isDark && saved.toLowerCase() === "#18181b") {
+          setAccentColorState("#FFFFFF");
+        } else {
+          setAccentColorState(saved);
+        }
       }
     } catch (e) {
       console.error("Failed to load accent color:", e);

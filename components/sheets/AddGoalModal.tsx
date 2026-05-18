@@ -2,7 +2,7 @@ import CategoryCardPicker from "@/components/category/CategoryCardPicker";
 import WheelPicker from "@/components/forms/WheelPicker";
 import { useLanguage } from "@/context/LanguageContext";
 import { getContrastingColor, useAppTheme } from "@/context/ThemeContext";
-import { useTracking } from "@/context/TrackingContext";
+import { useTracking, getRecurringWindow } from "@/context/TrackingContext";
 import { impact, notification } from "@/utils/haptics";
 import { ImpactFeedbackStyle, NotificationFeedbackType } from "expo-haptics";
 import { Calendar as CalendarIcon, X } from "lucide-react-native";
@@ -41,6 +41,7 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
   const [targetHours, setTargetHours] = useState(0);
   const [targetMins, setTargetMins] = useState(0);
   const [selectedCatId, setSelectedCatId] = useState<string>("");
+  const [recurring, setRecurring] = useState<"daily" | "weekly" | "monthly" | "none">("weekly");
   const hourValues = React.useMemo(() => Array.from({ length: 100 }, (_, i) => `${i}`), []);
   const minValues = React.useMemo(() => Array.from({ length: 60 }, (_, i) => `${i}`), []);
 
@@ -76,11 +77,13 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
           setTargetHours(Math.floor(g.targetMins / 60));
           setTargetMins(g.targetMins % 60);
           setSelectedCatId(g.categoryId);
+          setRecurring(g.recurring || "weekly");
         }
       } else {
         setGoalName("");
         setTargetHours(0);
         setTargetMins(0);
+        setRecurring("weekly");
       }
       Animated.parallel([
         Animated.timing(sheetBackdrop, { toValue: 1, duration: 220, useNativeDriver: true }),
@@ -110,14 +113,23 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
     endOfWeek.setDate(startOfWeek.getDate() + 6);
     endOfWeek.setHours(23, 59, 59, 999);
 
+    let startDate = startOfWeek.getTime();
+    let endDate = endOfWeek.getTime();
+    const win = getRecurringWindow(recurring, Date.now());
+    if (win) {
+      startDate = win.startDate;
+      endDate = win.endDate;
+    }
+
     if (editingGoalId) {
       editCustomGoal({
         id: editingGoalId,
         name: goalName.trim(),
         targetMins: totalMins,
         categoryId: selectedCatId,
-        startDate: startOfWeek.getTime(),
-        endDate: endOfWeek.getTime(),
+        startDate,
+        endDate,
+        recurring,
       });
     } else {
       addCustomGoal({
@@ -125,8 +137,9 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
         name: goalName.trim(),
         targetMins: totalMins,
         categoryId: selectedCatId,
-        startDate: startOfWeek.getTime(),
-        endDate: endOfWeek.getTime(),
+        startDate,
+        endDate,
+        recurring,
       });
     }
     notification(NotificationFeedbackType.Success);
@@ -134,6 +147,8 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
   };
 
   const isFormValid = goalName.trim() && (targetHours * 60 + targetMins) > 0 && selectedCatId;
+
+  const targetTitle = recurring === "daily" ? "DAILY HOUR TARGET" : recurring === "monthly" ? "MONTHLY HOUR TARGET" : recurring === "none" ? "TOTAL HOUR TARGET" : "WEEKLY HOUR TARGET";
 
   return (
     <Modal visible={visible} transparent animationType="none" onRequestClose={onClose}>
@@ -168,7 +183,7 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
                   {editingGoalId ? "Edit Goal" : "New Goal"}
                 </Text>
                 <Text className="text-[10px] font-black text-gray-400 uppercase tracking-widest mt-1">
-                  {editingGoalId ? "Update your goal parameters" : "Set your weekly focus target"}
+                  {editingGoalId ? "Update your goal parameters" : "Set your focus target"}
                 </Text>
               </View>
               <Pressable
@@ -214,9 +229,35 @@ export default function AddGoalModal({ visible, onClose, editingGoalId }: Props)
                 />
               </View>
 
-              {/* Weekly Target */}
+              {/* Recurring Frequency */}
               <View className="mb-8">
-                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">WEEKLY HOUR TARGET</Text>
+                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">RECURRING FREQUENCY</Text>
+                <View className="flex-row bg-gray-100 dark:bg-black/40 p-1.5 rounded-3xl border border-gray-200 dark:border-zinc-800">
+                  {(["daily", "weekly", "monthly", "none"] as const).map((opt) => {
+                    const isSelected = recurring === opt;
+                    const labels = { daily: "Daily", weekly: "Weekly", monthly: "Monthly", none: "One-off" };
+                    return (
+                      <Pressable
+                        key={opt}
+                        onPress={() => {
+                          impact(ImpactFeedbackStyle.Light);
+                          setRecurring(opt);
+                        }}
+                        style={{ backgroundColor: isSelected ? accentColor : "transparent" }}
+                        className="flex-1 py-3 rounded-2xl items-center justify-center"
+                      >
+                        <Text className={`text-xs font-black uppercase tracking-wider ${isSelected ? "text-white" : "text-gray-400 dark:text-zinc-500"}`}>
+                          {labels[opt]}
+                        </Text>
+                      </Pressable>
+                    );
+                  })}
+                </View>
+              </View>
+
+              {/* Weekly/Daily/Monthly Target */}
+              <View className="mb-8">
+                <Text className="text-[10px] font-black text-gray-400 dark:text-zinc-500 uppercase tracking-widest mb-3 ml-1">{targetTitle}</Text>
                 <View
                   onTouchStart={() => setSheetScrollEnabled(false)}
                   onTouchEnd={() => setSheetScrollEnabled(true)}

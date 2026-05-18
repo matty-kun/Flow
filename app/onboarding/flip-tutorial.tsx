@@ -18,7 +18,6 @@ import { Accelerometer } from "expo-sensors";
 import { ChevronLeft, Zap } from "lucide-react-native";
 import ProgressIndicator from "./ProgressIndicator";
 import TypewriterText from "./TypewriterText";
-import { Audio } from "expo-av";
 
 const { width } = Dimensions.get("window");
 
@@ -28,26 +27,7 @@ export default function FlipTutorialScreen() {
   const isDark = colorScheme === "dark";
   const [isFlipped, setIsFlipped] = useState(false);
   const [focusModeOn, setFocusModeOn] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    // Load chime sound
-    const loadSound = async () => {
-      try {
-        const { sound } = await Audio.Sound.createAsync(
-          require("../../assets/sounds/chime.mp3")
-        );
-        soundRef.current = sound;
-      } catch (e) {
-        console.log("No chime sound found, skipping audio feedback.");
-      }
-    };
-    loadSound();
-    return () => {
-      soundRef.current?.unloadAsync();
-    };
-  }, []);
 
   useEffect(() => {
     if (!focusModeOn) return;
@@ -73,10 +53,6 @@ export default function FlipTutorialScreen() {
     setIsFlipped(true);
     notification(NotificationFeedbackType.Success);
     impact(ImpactFeedbackStyle.Heavy);
-    
-    try {
-      await soundRef.current?.replayAsync();
-    } catch (e) {}
 
     Animated.timing(fadeAnim, {
       toValue: 1,
